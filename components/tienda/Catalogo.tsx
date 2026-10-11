@@ -2,36 +2,49 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import type { Categoria, Producto } from "@/lib/tienda/types";
+import { POR_PAGINA, type Filtros } from "@/lib/tienda/filtros";
 import ImagenProducto from "./ImagenProducto";
 import BotonAgregar from "./BotonAgregar";
 import { useBase } from "./BaseTienda";
 
-type Orden = "recientes" | "az" | "za";
+// La búsqueda espera a que el cliente deje de escribir antes de pedir resultados.
+const ESPERA_BUSQUEDA = 350;
 
-const POR_PAGINA = 24;
-
-const normalizar = (s: string) =>
-  s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
-
+/**
+ * Lista de productos de la tienda. El servidor ya manda solo la página que se ve (24 productos),
+ * filtrada por búsqueda, categoría y orden; aquí solo se cambian esos filtros en la dirección.
+ */
 export default function Catalogo({
   categorias,
+  conteo,
+  total,
   productos,
+  encontrados,
+  filtros,
   placeholder = "Buscar producto por nombre…",
 }: {
   categorias: Categoria[];
+  conteo: Record<number, number>;
+  total: number;
   productos: Producto[];
+  encontrados: number;
+  filtros: Filtros;
   placeholder?: string;
 }) {
   const router = useRouter();
   const base = useBase();
   const pathname = base || "/";
   const params = useSearchParams();
+  const [cargando, iniciar] = useTransition();
 
-  const [busqueda, setBusqueda] = useState(params.get("q") ?? "");
-  const [orden, setOrden] = useState<Orden>((params.get("orden") as Orden) || "recientes");
-  const categoriaSel = params.get("categoria") ? Number(params.get("categoria")) : null;
+  const [busqueda, setBusqueda] = useState(filtros.q);
+  const { orden, pagina, categoria: categoriaSel } = filtros;
+  const espera = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(espera.current), []);
+  // Si la búsqueda cambia por fuera (botón atrás), el cuadro de texto la sigue
+  useEffect(() => setBusqueda((b) => (b.trim() === filtros.q ? b : filtros.q)), [filtros.q]);
 
   const inicioLista = useRef<HTMLParagraphElement>(null);
 
@@ -42,33 +55,23 @@ export default function Catalogo({
     for (const [k, v] of Object.entries(cambios)) (v ? p.set(k, v) : p.delete(k));
     const qs = p.toString();
     const url = qs ? `${pathname}?${qs}` : pathname;
-    if (nuevaEntrada) router.push(url, { scroll: false });
-    else router.replace(url, { scroll: false });
+    iniciar(() => {
+      if (nuevaEntrada) router.push(url, { scroll: false });
+      else router.replace(url, { scroll: false });
+    });
   };
 
-  const conteo = useMemo(() => {
-    const m = new Map<number, number>();
-    for (const p of productos) if (p.categoria_id) m.set(p.categoria_id, (m.get(p.categoria_id) ?? 0) + 1);
-    return m;
-  }, [productos]);
+  const buscar = (texto: string) => {
+    setBusqueda(texto);
+    clearTimeout(espera.current);
+    espera.current = setTimeout(() => actualizarUrl({ q: texto.trim() || null }), ESPERA_BUSQUEDA);
+  };
 
   const nombreCategoria = useMemo(() => new Map(categorias.map((c) => [c.id, c.nombre])), [categorias]);
 
-  const visibles = useMemo(() => {
-    const q = normalizar(busqueda);
-    const lista = productos.filter(
-      (p) => (categoriaSel === null || p.categoria_id === categoriaSel) && (!q || normalizar(p.nombre).includes(q)),
-    );
-    if (orden === "az") lista.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
-    else if (orden === "za") lista.sort((a, b) => b.nombre.localeCompare(a.nombre, "es"));
-    else lista.sort((a, b) => b.creado_en.localeCompare(a.creado_en));
-    return lista;
-  }, [productos, busqueda, categoriaSel, orden]);
-
-  const totalPaginas = Math.max(1, Math.ceil(visibles.length / POR_PAGINA));
-  const pagina = Math.min(Math.max(1, Math.floor(Number(params.get("pagina")) || 1)), totalPaginas);
+  const totalPaginas = Math.max(1, Math.ceil(encontrados / POR_PAGINA));
   const desde = (pagina - 1) * POR_PAGINA;
-  const enPagina = visibles.slice(desde, desde + POR_PAGINA);
+  const enPagina = productos;
 
   const irA = (n: number) => {
     actualizarUrl({ pagina: n > 1 ? String(n) : null }, true);
@@ -92,10 +95,7 @@ export default function Catalogo({
           <input
             type="search"
             value={busqueda}
-            onChange={(e) => {
-              setBusqueda(e.target.value);
-              actualizarUrl({ q: e.target.value || null });
-            }}
+            onChange={(e) => buscar(e.target.value)}
             placeholder={placeholder}
             className="campo py-2.5 pl-9"
             aria-label="Buscar producto por nombre"
@@ -103,10 +103,7 @@ export default function Catalogo({
         </div>
         <select
           value={orden}
-          onChange={(e) => {
-            setOrden(e.target.value as Orden);
-            actualizarUrl({ orden: e.target.value === "recientes" ? null : e.target.value });
-          }}
+          onChange={(e) => actualizarUrl({ orden: e.target.value === "recientes" ? null : e.target.value })}
           className="campo sm:w-48"
           aria-label="Ordenar"
         >
@@ -119,29 +116,30 @@ export default function Catalogo({
       {/* Categorías */}
       <nav className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-2" aria-label="Categorías">
         <button className={chip(categoriaSel === null)} onClick={() => actualizarUrl({ categoria: null })}>
-          Todas ({productos.length})
+          Todas ({total})
         </button>
         {categorias.map((c) => (
           <button key={c.id} className={chip(categoriaSel === c.id)} onClick={() => actualizarUrl({ categoria: String(c.id) })}>
-            {c.nombre} ({conteo.get(c.id) ?? 0})
+            {c.nombre} ({conteo[c.id] ?? 0})
           </button>
         ))}
       </nav>
 
       <p ref={inicioLista} className="mt-3 scroll-mt-20 text-sm text-gray-500">
         {totalPaginas > 1 && `${desde + 1}–${desde + enPagina.length} de `}
-        {visibles.length} {visibles.length === 1 ? "producto" : "productos"}
+        {encontrados} {encontrados === 1 ? "producto" : "productos"}
         {categoriaSel !== null && nombreCategoria.get(categoriaSel) ? ` en ${nombreCategoria.get(categoriaSel)}` : ""}
-        {busqueda ? ` para “${busqueda}”` : ""}
+        {filtros.q ? ` para “${filtros.q}”` : ""}
       </p>
 
-      {visibles.length === 0 ? (
+      {encontrados === 0 ? (
         <div className="mt-10 rounded-xl border border-dashed bg-white p-10 text-center text-gray-500">
           No encontramos productos con esos filtros.
           <button
             className="ml-1 font-medium text-marca-600 hover:underline"
             onClick={() => {
               setBusqueda("");
+              clearTimeout(espera.current);
               actualizarUrl({ q: null, categoria: null });
             }}
           >
@@ -149,7 +147,9 @@ export default function Catalogo({
           </button>
         </div>
       ) : (
-        <ul className="mt-4 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
+        <ul
+          className={`mt-4 grid grid-cols-2 gap-3 transition-opacity sm:gap-4 md:grid-cols-3 lg:grid-cols-4 ${cargando ? "opacity-60" : ""}`}
+        >
           {enPagina.map((p) => (
             <li key={p.id} className="group flex flex-col overflow-hidden rounded-xl border bg-white shadow-sm transition hover:shadow-md">
               <Link href={`${base}/producto/${p.id}`} className="block">

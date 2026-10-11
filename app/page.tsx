@@ -5,7 +5,7 @@ import Marca, { Simbolo } from "@/components/Marca";
 import {
   IcoBolsa, IcoCaja, IcoCarrito, IcoCategorias, IcoCelular, IcoCheck, IcoCorreo, IcoEngrane, IcoEstrella, IcoGlobo, IcoImagen, IcoPaleta, IcoUbicacion, IcoWhatsApp,
 } from "@/components/panel/Iconos";
-import { obtenerAjustes, obtenerPlanes, obtenerTipos } from "@/lib/panel/datos";
+import { obtenerAjustes, obtenerPlanesPublicos as obtenerPlanes, obtenerTipos } from "@/lib/panel/datos";
 import { COLOR_PLAN } from "@/lib/panel/colores";
 import { lempiras } from "@/lib/negocio";
 import { formatearCelular, numeroWhatsApp } from "@/lib/telefono";

@@ -1,7 +1,10 @@
 import { cache } from "react";
 import { supabaseConfigurado } from "../config";
 import { ajustesDemo, clientesDemo, pagosDemo, planesDemo, solicitudesDemo, tiposDemo } from "./demo";
+import { unstable_cache } from "next/cache";
 import { crearClienteServidor } from "../supabase/server";
+import { crearClientePublico } from "../supabase/publico";
+import { SEGUNDOS_CACHE, TAG_PLATAFORMA } from "../cache";
 import type { Ajustes, Cliente, Pago, Plan, Solicitud, TipoNegocio } from "./types";
 
 const COLUMNAS_AJUSTES =
@@ -10,13 +13,41 @@ const COLUMNAS_AJUSTES =
 // Postgres devuelve numeric como texto: se convierte a número.
 const aPlan = (p: Plan): Plan => ({ ...p, precio_mensual: Number(p.precio_mensual) });
 
+// Ajustes, planes visibles y tipos de negocio son públicos: se leen sin sesión y se guardan en caché.
+const opcionesCache = { tags: [TAG_PLATAFORMA], revalidate: SEGUNDOS_CACHE };
+
+const ajustesPublicos = unstable_cache(
+  async () => (await crearClientePublico().from("ajustes_negocio").select(COLUMNAS_AJUSTES).eq("id", 1).maybeSingle()).data,
+  ["ajustes"],
+  opcionesCache,
+);
+
 export const obtenerAjustes = cache(async (): Promise<Ajustes> => {
   if (!supabaseConfigurado) return ajustesDemo;
-  const supabase = await crearClienteServidor();
-  const { data } = await supabase.from("ajustes_negocio").select(COLUMNAS_AJUSTES).eq("id", 1).maybeSingle();
+  const data = await ajustesPublicos();
   if (!data) return ajustesDemo;
   return { ...data, precio_instalacion: Number(data.precio_instalacion), precio_dominio: Number(data.precio_dominio) };
 });
+
+const planesVisibles = unstable_cache(
+  async (): Promise<Plan[]> => {
+    const { data, error } = await crearClientePublico()
+      .from("planes")
+      .select("id, nombre, subtitulo, precio_mensual, limite_productos, caracteristicas, color, orden, visible")
+      .eq("visible", true)
+      .order("orden")
+      .order("id");
+    if (error) throw error;
+    return data.map(aPlan);
+  },
+  ["planes-visibles"],
+  opcionesCache,
+);
+
+/** Planes que ve el público en la página principal (con caché). */
+export async function obtenerPlanesPublicos(): Promise<Plan[]> {
+  return supabaseConfigurado ? planesVisibles() : planesDemo.filter((p) => p.visible);
+}
 
 /** Planes ordenados. Para el público solo llegan los visibles (lo controla la base de datos). */
 export const obtenerPlanes = cache(async (): Promise<Plan[]> => {
@@ -86,16 +117,23 @@ export async function obtenerSolicitudes(): Promise<Solicitud[]> {
 }
 
 /** Tipos de negocio ordenados (todos; el formulario de clientes muestra solo los activos). */
+const tiposPublicos = unstable_cache(
+  async (): Promise<TipoNegocio[]> => {
+    const { data, error } = await crearClientePublico()
+      .from("tipos_negocio")
+      .select("id, nombre, color_principal, color_encabezado, titulo_portada, texto_portada, texto_buscador, categorias, orden, activo")
+      .order("orden")
+      .order("nombre");
+    if (error) throw error;
+    return data;
+  },
+  ["tipos"],
+  opcionesCache,
+);
+
 export const obtenerTipos = cache(async (): Promise<TipoNegocio[]> => {
   if (!supabaseConfigurado) return tiposDemo;
-  const supabase = await crearClienteServidor();
-  const { data, error } = await supabase
-    .from("tipos_negocio")
-    .select("id, nombre, color_principal, color_encabezado, titulo_portada, texto_portada, texto_buscador, categorias, orden, activo")
-    .order("orden")
-    .order("nombre");
-  if (error) throw error;
-  return data;
+  return tiposPublicos();
 });
 
 /** Nombre del tipo de negocio de un cliente ("Otro" muestra lo que se escribió). */

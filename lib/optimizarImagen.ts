@@ -65,6 +65,21 @@ export async function optimizarImagen(archivo: File, maximo = 1200): Promise<Fil
   }
 }
 
+// Tamaños de las fotos de productos: la grande para la ficha, la pequeña para la lista y la App.
+export const LADO_FOTO = 1000;
+export const LADO_MINI = 400;
+
+/** Pone un archivo en un campo de tipo file (vacía el campo si es null). */
+export function ponerArchivo(input: HTMLInputElement, archivo: File | null) {
+  try {
+    const dt = new DataTransfer();
+    if (archivo) dt.items.add(archivo);
+    input.files = dt.files;
+  } catch {
+    // Navegador sin DataTransfer: el formulario sigue sin la foto pequeña
+  }
+}
+
 export function formatoPeso(bytes: number) {
   return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }

@@ -85,7 +85,7 @@ export const tiposDemo: TipoNegocio[] = [
     "color_principal": "#ea580c",
     "color_encabezado": "#111827",
     "titulo_portada": "Todo para tu obra y tu hogar",
-    "texto_portada": "Explora el catálogo, agrega lo que necesitas al carrito y envíanos tu cotización por WhatsApp.",
+    "texto_portada": "Explora el catálogo, agrega lo que necesitas al carrito y envíanos tu pedido por WhatsApp.",
     "texto_buscador": "Busca martillo, tornillos, pintura…",
     "categorias": "Herramientas manuales\nHerramientas eléctricas\nTornillería y fijaciones\nPinturas\nElectricidad\nPlomería",
     "orden": 1,

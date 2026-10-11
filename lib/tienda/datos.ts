@@ -1,13 +1,20 @@
 import { cache } from "react";
 import { headers } from "next/headers";
+import { unstable_cache } from "next/cache";
+import { SEGUNDOS_CACHE, TAG_CATALOGO } from "../cache";
+import { crearClientePublico } from "../supabase/publico";
 import { supabaseConfigurado } from "../config";
 import { COLOR_ENCABEZADO, COLOR_PRINCIPAL } from "../tema";
 import { categoriasDemo, productosDemo } from "./demo";
 import { crearClienteServidor } from "../supabase/server";
 import { formatearCelular, numeroWhatsApp } from "../telefono";
 import type { Categoria, FilaTienda, Producto, Tienda, TipoNegocio } from "./types";
+import { POR_PAGINA, normalizar, type Filtros, type Orden } from "./filtros";
 
-const COLUMNAS_PRODUCTO = "id, nombre, descripcion, categoria_id, imagen_url, imagen_path, destacado, orden_destacado, creado_en";
+export { leerFiltros } from "./filtros";
+
+const COLUMNAS_PRODUCTO =
+  "id, nombre, descripcion, categoria_id, imagen_url, imagen_path, imagen_mini_url, destacado, orden_destacado, creado_en";
 const COLUMNAS_TIENDA =
   "id, slug, nombre_tienda, logo_url, logo_path, codigo_pais, celular, activa, tipo_negocio_id, tipo_negocio_otro, " +
   "color_principal, color_encabezado, titulo_portada, texto_portada, texto_buscador, banner_url, banner_path, " +
@@ -83,6 +90,169 @@ export async function obtenerTienda(slug: string): Promise<Tienda | null> {
   return t ? aTienda(t) : null;
 }
 
+// --- Lo que ve el visitante: mismas consultas, sin sesión y guardadas en caché ---
+const opcionesCache = { tags: [TAG_CATALOGO], revalidate: SEGUNDOS_CACHE };
+
+const filaPublica = unstable_cache(
+  async (slug: string): Promise<FilaTienda | null> => {
+    const { data, error } = await crearClientePublico().from("tiendas").select(COLUMNAS_TIENDA).eq("slug", slug).maybeSingle<FilaTienda>();
+    if (error) throw error;
+    return data;
+  },
+  ["tienda-publica"],
+  opcionesCache,
+);
+
+/** Tienda para las páginas públicas (con caché). */
+export const obtenerTiendaPublica = cache(async (slug: string): Promise<Tienda | null> => {
+  const t = supabaseConfigurado ? await filaPublica(slug) : demoTienda(slug);
+  return t ? aTienda(t) : null;
+});
+
+const categoriasPublicas = unstable_cache(
+  async (tiendaId: number): Promise<Categoria[]> => {
+    const { data, error } = await crearClientePublico().from("categorias").select("id, nombre").eq("tienda_id", tiendaId).order("nombre");
+    if (error) throw error;
+    return data;
+  },
+  ["categorias-publicas"],
+  opcionesCache,
+);
+
+/** Cuántos productos tiene cada categoría (clave 0 = sin categoría). */
+const conteoPublico = unstable_cache(
+  async (tiendaId: number): Promise<Record<number, number>> => {
+    const { data, error } = await crearClientePublico().rpc("conteo_categorias", { t: tiendaId });
+    if (error) throw error;
+    const conteo: Record<number, number> = {};
+    for (const f of data as { categoria_id: number | null; total: number }[]) conteo[f.categoria_id ?? 0] = Number(f.total);
+    return conteo;
+  },
+  ["conteo-categorias"],
+  opcionesCache,
+);
+
+const destacadosPublicos = unstable_cache(
+  async (tiendaId: number): Promise<Producto[]> => {
+    const { data, error } = await crearClientePublico()
+      .from("productos")
+      .select(COLUMNAS_PRODUCTO)
+      .eq("tienda_id", tiendaId)
+      .eq("destacado", true)
+      .order("orden_destacado")
+      .order("creado_en", { ascending: false });
+    if (error) throw error;
+    return data;
+  },
+  ["destacados-publicos"],
+  opcionesCache,
+);
+
+type Pagina = { productos: Producto[]; encontrados: number };
+
+const paginaPublica = unstable_cache(
+  async (tiendaId: number, q: string, categoria: number | null, orden: Orden, pagina: number): Promise<Pagina> => {
+    let consulta = crearClientePublico()
+      .from("productos")
+      .select(COLUMNAS_PRODUCTO, { count: "exact" })
+      .eq("tienda_id", tiendaId);
+    if (categoria) consulta = consulta.eq("categoria_id", categoria);
+    // Sin comodines ni signos que PostgREST interpreta
+    const texto = normalizar(q).replace(/[%_*,()\\."]/g, " ").trim();
+    if (texto) consulta = consulta.ilike("nombre_busqueda", `%${texto}%`);
+    if (orden === "recientes") consulta = consulta.order("creado_en", { ascending: false }).order("id", { ascending: false });
+    else consulta = consulta.order("nombre_busqueda", { ascending: orden === "az" }).order("id");
+    const desde = (pagina - 1) * POR_PAGINA;
+    const { data, count, error } = await consulta.range(desde, desde + POR_PAGINA - 1);
+    // Pedir una página que ya no existe (por ejemplo ?pagina=999) no es un error: llega vacía
+    if (error && error.code !== "PGRST103") throw error;
+    return { productos: data ?? [], encontrados: count ?? 0 };
+  },
+  ["pagina-catalogo"],
+  opcionesCache,
+);
+
+export type CatalogoPagina = {
+  categorias: Categoria[];
+  conteo: Record<number, number>;
+  total: number;
+  destacados: Producto[];
+  productos: Producto[];
+  encontrados: number;
+  filtros: Filtros;
+};
+
+/**
+ * Lo que muestra la portada de la tienda: solo la página de productos que se está viendo
+ * (24), ya filtrada por búsqueda y categoría en la base de datos. Así una tienda con
+ * 10.000 productos pesa lo mismo que una con 50. Todo con caché.
+ */
+export async function obtenerPaginaCatalogo(tiendaId: number, filtros: Filtros): Promise<CatalogoPagina> {
+  if (!supabaseConfigurado) return paginaDemo(filtros);
+  const [categorias, conteo, top] = await Promise.all([categoriasPublicas(tiendaId), conteoPublico(tiendaId), destacadosPublicos(tiendaId)]);
+  const total = Object.values(conteo).reduce((a, b) => a + b, 0);
+  let { productos, encontrados } = await paginaPublica(tiendaId, filtros.q, filtros.categoria, filtros.orden, filtros.pagina);
+  // Página más allá de la última (por ejemplo ?pagina=999): se muestra la última
+  let f = filtros;
+  if (!productos.length && filtros.pagina > 1) {
+    const primera = await paginaPublica(tiendaId, filtros.q, filtros.categoria, filtros.orden, 1);
+    f = { ...filtros, pagina: Math.max(1, Math.ceil(primera.encontrados / POR_PAGINA)) };
+    ({ productos, encontrados } = f.pagina === 1 ? primera : await paginaPublica(tiendaId, f.q, f.categoria, f.orden, f.pagina));
+  }
+  return { categorias, conteo, total, destacados: top, productos, encontrados, filtros: f };
+}
+
+function paginaDemo(filtros: Filtros): CatalogoPagina {
+  const q = normalizar(filtros.q);
+  const lista = productosDemo.filter(
+    (p) => (filtros.categoria === null || p.categoria_id === filtros.categoria) && (!q || normalizar(p.nombre).includes(q)),
+  );
+  if (filtros.orden === "az") lista.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+  else if (filtros.orden === "za") lista.sort((a, b) => b.nombre.localeCompare(a.nombre, "es"));
+  const conteo: Record<number, number> = {};
+  for (const p of productosDemo) conteo[p.categoria_id ?? 0] = (conteo[p.categoria_id ?? 0] ?? 0) + 1;
+  const ultima = Math.max(1, Math.ceil(lista.length / POR_PAGINA));
+  const f = { ...filtros, pagina: Math.min(filtros.pagina, ultima) };
+  const desde = (f.pagina - 1) * POR_PAGINA;
+  return {
+    categorias: categoriasDemo,
+    conteo,
+    total: productosDemo.length,
+    destacados: destacados(productosDemo),
+    productos: lista.slice(desde, desde + POR_PAGINA),
+    encontrados: lista.length,
+    filtros: f,
+  };
+}
+
+const productoPublico = unstable_cache(
+  async (tiendaId: number, id: number): Promise<Producto | null> => {
+    const { data, error } = await crearClientePublico()
+      .from("productos")
+      .select(COLUMNAS_PRODUCTO)
+      .eq("tienda_id", tiendaId)
+      .eq("id", id)
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  },
+  ["producto-publico"],
+  opcionesCache,
+);
+
+/** Un producto para su página pública (con caché). */
+export async function obtenerProductoPublico(
+  tiendaId: number,
+  id: number,
+): Promise<{ producto: Producto | null; categoria: Categoria | null }> {
+  if (!supabaseConfigurado) return obtenerProducto(tiendaId, id);
+  const [producto, categorias] = await Promise.all([productoPublico(tiendaId, id), categoriasPublicas(tiendaId)]);
+  const categoria = categorias.find((c) => c.id === producto?.categoria_id) ?? null;
+  return { producto, categoria };
+}
+
+// --- Para el panel del dueño (con su sesión, sin caché) ---
+
 export async function obtenerCatalogo(tiendaId: number): Promise<{ categorias: Categoria[]; productos: Producto[] }> {
   if (!supabaseConfigurado) return { categorias: categoriasDemo, productos: productosDemo };
 
@@ -122,6 +292,58 @@ async function todosLosProductos(
     todos.push(...data);
     if (data.length < BLOQUE) return todos;
   }
+}
+
+export const POR_PAGINA_PANEL = 50;
+
+/**
+ * Datos del panel del dueño: categorías, cuántos productos tiene cada una, lo más vendido
+ * y solo la página de productos que se está viendo (50), con búsqueda por nombre.
+ * Con su sesión y sin caché, para que vea siempre lo último.
+ */
+export async function obtenerPanelProductos(tiendaId: number, q: string, pedida: number) {
+  if (!supabaseConfigurado) {
+    return { categorias: categoriasDemo, conteo: {} as Record<number, number>, total: 0, top: [] as Producto[], productos: [] as Producto[], encontrados: 0, pagina: 1 };
+  }
+  const supabase = await crearClienteServidor();
+  const pedirPagina = async (pagina: number) => {
+    let consulta = supabase.from("productos").select(COLUMNAS_PRODUCTO, { count: "exact" }).eq("tienda_id", tiendaId);
+    const texto = normalizar(q).replace(/[%_*,()\\."]/g, " ").trim();
+    if (texto) consulta = consulta.ilike("nombre_busqueda", `%${texto}%`);
+    const desde = (pagina - 1) * POR_PAGINA_PANEL;
+    const { data, count, error } = await consulta
+      .order("creado_en", { ascending: false })
+      .order("id", { ascending: false })
+      .range(desde, desde + POR_PAGINA_PANEL - 1);
+    if (error && error.code !== "PGRST103") throw error;
+    return { productos: data ?? [], encontrados: count ?? 0 };
+  };
+  const [cats, conteoRpc, top, primera] = await Promise.all([
+    supabase.from("categorias").select("id, nombre").eq("tienda_id", tiendaId).order("nombre"),
+    supabase.rpc("conteo_categorias", { t: tiendaId }),
+    supabase
+      .from("productos")
+      .select(COLUMNAS_PRODUCTO)
+      .eq("tienda_id", tiendaId)
+      .eq("destacado", true)
+      .order("orden_destacado")
+      .order("creado_en", { ascending: false }),
+    pedirPagina(Math.max(1, pedida)),
+  ]);
+  if (cats.error) throw cats.error;
+  if (conteoRpc.error) throw conteoRpc.error;
+  if (top.error) throw top.error;
+  const conteo: Record<number, number> = {};
+  for (const f of conteoRpc.data as { categoria_id: number | null; total: number }[]) conteo[f.categoria_id ?? 0] = Number(f.total);
+  let { productos, encontrados } = primera;
+  let pagina = Math.max(1, pedida);
+  if (!productos.length && pagina > 1) {
+    const uno = await pedirPagina(1);
+    pagina = Math.max(1, Math.ceil(uno.encontrados / POR_PAGINA_PANEL));
+    ({ productos, encontrados } = pagina === 1 ? uno : await pedirPagina(pagina));
+  }
+  const total = Object.values(conteo).reduce((a, b) => a + b, 0);
+  return { categorias: cats.data as Categoria[], conteo, total, top: top.data as Producto[], productos, encontrados, pagina };
 }
 
 export async function obtenerProducto(

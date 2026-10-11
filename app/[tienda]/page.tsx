@@ -4,17 +4,30 @@ import { notFound } from "next/navigation";
 import Catalogo from "@/components/tienda/Catalogo";
 import Destacados from "@/components/tienda/Destacados";
 import NoDisponible from "@/components/tienda/NoDisponible";
-import { destacados, obtenerCatalogo, obtenerTienda } from "@/lib/tienda/datos";
+import { leerFiltros, obtenerPaginaCatalogo, obtenerTiendaPublica as obtenerTienda } from "@/lib/tienda/datos";
 import { supabaseConfigurado } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
-export default async function Inicio({ params }: { params: Promise<{ tienda: string }> }) {
+export default async function Inicio({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ tienda: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const tienda = await obtenerTienda((await params).tienda);
   if (!tienda) notFound();
   if (!tienda.activa) return <NoDisponible nombre={tienda.nombre} />;
-  const { categorias, productos } = await obtenerCatalogo(tienda.id);
-  const top = destacados(productos);
+  const catalogo = await obtenerPaginaCatalogo(tienda.id, leerFiltros(await searchParams));
+  // Lista y carrusel con la foto pequeña (si el producto la tiene); la grande queda para la ficha
+  const top = catalogo.destacados.map((p) => ({ ...p, imagen_url: p.imagen_mini_url || p.imagen_url }));
+  // A la lista solo van los datos que muestra (la descripción ya sale cortada a 2 líneas)
+  const productos = catalogo.productos.map(({ id, nombre, descripcion, categoria_id, imagen_url, imagen_mini_url, creado_en }) => ({
+    id, nombre, categoria_id, creado_en,
+    imagen_url: imagen_mini_url || imagen_url,
+    descripcion: descripcion.length > 140 ? descripcion.slice(0, 137).trimEnd() + "…" : descripcion,
+  }));
 
   return (
     <>
@@ -39,7 +52,15 @@ export default async function Inicio({ params }: { params: Promise<{ tienda: str
       )}
       {top.length > 0 && <Destacados productos={top} />}
       <Suspense>
-        <Catalogo categorias={categorias} productos={productos} placeholder={tienda.textoBuscador} />
+        <Catalogo
+          categorias={catalogo.categorias}
+          conteo={catalogo.conteo}
+          total={catalogo.total}
+          productos={productos}
+          encontrados={catalogo.encontrados}
+          filtros={catalogo.filtros}
+          placeholder={tienda.textoBuscador}
+        />
       </Suspense>
     </>
   );

@@ -12,7 +12,7 @@ export default function BotonAgregar({ producto, grande = false }: { producto: P
     <button
       onClick={(e) => {
         e.preventDefault();
-        agregar({ id: producto.id, nombre: producto.nombre, imagen_url: producto.imagen_url });
+        agregar({ id: producto.id, nombre: producto.nombre, imagen_url: producto.imagen_mini_url || producto.imagen_url });
         setAgregado(true);
         setTimeout(() => setAgregado(false), 1200);
       }}

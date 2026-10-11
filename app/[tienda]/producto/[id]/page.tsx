@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import ImagenProducto from "@/components/tienda/ImagenProducto";
 import BotonAgregar from "@/components/tienda/BotonAgregar";
 import NoDisponible from "@/components/tienda/NoDisponible";
-import { obtenerBase, obtenerProducto, obtenerTienda } from "@/lib/tienda/datos";
+import { obtenerBase, obtenerProductoPublico as obtenerProducto, obtenerTiendaPublica as obtenerTienda } from "@/lib/tienda/datos";
 import { enlaceWhatsApp, mensajeCotizacion } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";

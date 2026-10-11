@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { refrescarCache } from "@/lib/cache";
 import { redirect } from "next/navigation";
 import { obtenerAdminTienda } from "@/lib/supabase/server";
 import { normalizarCelular } from "@/lib/telefono";
@@ -11,6 +12,7 @@ export type Resultado = { ok: boolean; mensaje: string } | null;
 
 const TIPOS = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MAX_BYTES = 5 * 1024 * 1024;
+const MAX_BYTES_MINI = 1024 * 1024;
 const BUCKET = "imagenes";
 const MAX_DESTACADOS = 12;
 
@@ -30,8 +32,35 @@ function leerProducto(formData: FormData) {
   const imagen = formData.get("imagen");
   const archivo = imagen instanceof File && imagen.size > 0 ? imagen : null;
   const destacado = formData.get("destacado") === "on";
-  return { nombre, descripcion, categoria_id: Number.isInteger(categoria) && categoria > 0 ? categoria : null, archivo, destacado };
+  // Foto pequeña para la lista (la hace el navegador). Si falta o no sirve, la lista usa la grande.
+  const mini = formData.get("imagen_mini");
+  const archivoMini =
+    archivo && mini instanceof File && mini.size > 0 && mini.size <= MAX_BYTES_MINI && TIPOS.includes(mini.type) && mini.size < archivo.size
+      ? mini
+      : null;
+  return { nombre, descripcion, categoria_id: Number.isInteger(categoria) && categoria > 0 ? categoria : null, archivo, archivoMini, destacado };
 }
+
+/** Sube la foto y, si hay, su versión pequeña. */
+async function subirFotos(supabase: Awaited<ReturnType<typeof exigirAdmin>>, tiendaId: number, archivo: File, mini: File | null) {
+  const grande = await subirImagen(supabase, tiendaId, archivo);
+  let chica: { imagen_path: string; imagen_url: string } | null = null;
+  if (mini) {
+    try {
+      chica = await subirImagen(supabase, tiendaId, mini);
+    } catch {
+      chica = null; // Sin la pequeña la tienda usa la grande: no se pierde la foto
+    }
+  }
+  return {
+    imagen_path: grande.imagen_path,
+    imagen_url: grande.imagen_url,
+    imagen_mini_path: chica?.imagen_path ?? null,
+    imagen_mini_url: chica?.imagen_url ?? null,
+  };
+}
+
+const rutas = (...p: (string | null | undefined)[]) => p.filter((x): x is string => Boolean(x));
 
 function validarImagen(archivo: File | null): string | null {
   if (!archivo) return null;
@@ -71,14 +100,14 @@ async function siguienteOrden(supabase: Awaited<ReturnType<typeof exigirAdmin>>,
 export async function crearProducto(tiendaId: number, _prev: Resultado, formData: FormData): Promise<Resultado> {
   try {
     const supabase = await exigirAdmin(tiendaId);
-    const { nombre, descripcion, categoria_id, archivo, destacado } = leerProducto(formData);
+    const { nombre, descripcion, categoria_id, archivo, archivoMini, destacado } = leerProducto(formData);
     if (!nombre) return { ok: false, mensaje: "El nombre es obligatorio." };
     if (!categoria_id) return { ok: false, mensaje: "Elige una categoría." };
     if (!archivo) return { ok: false, mensaje: "Sube una imagen del producto." };
     const errImg = validarImagen(archivo);
     if (errImg) return { ok: false, mensaje: errImg };
 
-    const imagen = await subirImagen(supabase, tiendaId, archivo);
+    const imagen = await subirFotos(supabase, tiendaId, archivo, archivoMini);
     const { error } = await supabase
       .from("productos")
       .insert({
@@ -91,10 +120,11 @@ export async function crearProducto(tiendaId: number, _prev: Resultado, formData
         ...imagen,
       });
     if (error) {
-      await supabase.storage.from(BUCKET).remove([imagen.imagen_path]);
+      await supabase.storage.from(BUCKET).remove(rutas(imagen.imagen_path, imagen.imagen_mini_path));
       return { ok: false, mensaje: error.code === "P0001" ? error.message : "No se pudo guardar: " + error.message };
     }
     revalidatePath("/", "layout");
+    refrescarCache();
     return { ok: true, mensaje: `“${nombre}” se agregó al catálogo.` };
   } catch (e) {
     return { ok: false, mensaje: e instanceof Error ? e.message : "Error inesperado." };
@@ -106,7 +136,7 @@ export async function actualizarProducto(tiendaId: number, _prev: Resultado, for
   try {
     const supabase = await exigirAdmin(tiendaId);
     const id = Number(formData.get("id"));
-    const { nombre, descripcion, categoria_id, archivo, destacado } = leerProducto(formData);
+    const { nombre, descripcion, categoria_id, archivo, archivoMini, destacado } = leerProducto(formData);
     if (!nombre) return { ok: false, mensaje: "El nombre es obligatorio." };
     if (!categoria_id) return { ok: false, mensaje: "Elige una categoría." };
     const errImg = validarImagen(archivo);
@@ -114,19 +144,21 @@ export async function actualizarProducto(tiendaId: number, _prev: Resultado, for
 
     const { data: actual } = await supabase
       .from("productos")
-      .select("imagen_path, destacado")
+      .select("imagen_path, imagen_mini_path, destacado")
       .eq("id", id)
       .eq("tienda_id", tiendaId)
       .maybeSingle();
     if (!actual) return { ok: false, mensaje: "Ese producto no existe en esta tienda." };
     const cambios: Record<string, unknown> = { nombre, descripcion, categoria_id, destacado };
     if (destacado && !actual.destacado) cambios.orden_destacado = await siguienteOrden(supabase, tiendaId);
-    if (archivo) Object.assign(cambios, await subirImagen(supabase, tiendaId, archivo));
+    if (archivo) Object.assign(cambios, await subirFotos(supabase, tiendaId, archivo, archivoMini));
 
     const { error } = await supabase.from("productos").update(cambios).eq("id", id).eq("tienda_id", tiendaId);
     if (error) return { ok: false, mensaje: error.code === "P0001" ? error.message : "No se pudo guardar: " + error.message };
-    if (archivo && actual.imagen_path) await supabase.storage.from(BUCKET).remove([actual.imagen_path]);
+    const viejas = rutas(actual.imagen_path, actual.imagen_mini_path);
+    if (archivo && viejas.length) await supabase.storage.from(BUCKET).remove(viejas);
     revalidatePath("/", "layout");
+    refrescarCache();
     exito = true;
   } catch (e) {
     return { ok: false, mensaje: e instanceof Error ? e.message : "Error inesperado." };
@@ -140,14 +172,16 @@ export async function eliminarProducto(tiendaId: number, formData: FormData) {
   const id = Number(formData.get("id"));
   const { data } = await supabase
     .from("productos")
-    .select("imagen_path")
+    .select("imagen_path, imagen_mini_path")
     .eq("id", id)
     .eq("tienda_id", tiendaId)
     .maybeSingle();
   if (!data) return;
   await supabase.from("productos").delete().eq("id", id).eq("tienda_id", tiendaId);
-  if (data.imagen_path) await supabase.storage.from(BUCKET).remove([data.imagen_path]);
+  const fotos = rutas(data.imagen_path, data.imagen_mini_path);
+  if (fotos.length) await supabase.storage.from(BUCKET).remove(fotos);
   revalidatePath("/", "layout");
+  refrescarCache();
 }
 
 export async function crearCategoria(tiendaId: number, _prev: Resultado, formData: FormData): Promise<Resultado> {
@@ -158,6 +192,7 @@ export async function crearCategoria(tiendaId: number, _prev: Resultado, formDat
     const { error } = await supabase.from("categorias").insert({ tienda_id: tiendaId, nombre });
     if (error) return { ok: false, mensaje: error.code === "23505" ? "Esa categoría ya existe." : error.message };
     revalidatePath("/", "layout");
+    refrescarCache();
     return { ok: true, mensaje: `Categoría “${nombre}” creada.` };
   } catch (e) {
     return { ok: false, mensaje: e instanceof Error ? e.message : "Error inesperado." };
@@ -168,6 +203,7 @@ export async function eliminarCategoria(tiendaId: number, formData: FormData) {
   const supabase = await exigirAdmin(tiendaId);
   await supabase.from("categorias").delete().eq("id", Number(formData.get("id"))).eq("tienda_id", tiendaId);
   revalidatePath("/", "layout");
+  refrescarCache();
 }
 
 export async function guardarConfiguracion(tiendaId: number, _prev: Resultado, formData: FormData): Promise<Resultado> {
@@ -206,6 +242,7 @@ export async function guardarConfiguracion(tiendaId: number, _prev: Resultado, f
     if (error) return { ok: false, mensaje: "No se pudo guardar: " + error.message };
     if ((archivo || quitarLogo) && actual?.logo_path) await supabase.storage.from(BUCKET).remove([actual.logo_path]);
     revalidatePath("/", "layout");
+    refrescarCache();
     return { ok: true, mensaje: "Datos de la tienda guardados." };
   } catch (e) {
     return { ok: false, mensaje: e instanceof Error ? e.message : "Error inesperado." };
@@ -230,6 +267,7 @@ export async function cambiarDestacado(tiendaId: number, formData: FormData): Pr
       };
     }
     revalidatePath("/", "layout");
+    refrescarCache();
     return { ok: true, mensaje: destacado ? "Agregado a lo más vendido." : "Quitado de lo más vendido." };
   } catch (e) {
     return { ok: false, mensaje: e instanceof Error ? e.message : "Error inesperado." };
@@ -262,6 +300,7 @@ export async function moverDestacado(tiendaId: number, formData: FormData) {
     ),
   );
   revalidatePath("/", "layout");
+  refrescarCache();
 }
 
 // Apariencia: colores, banner y textos de la portada ---------------------------
@@ -302,6 +341,7 @@ export async function guardarApariencia(tiendaId: number, _prev: Resultado, form
     if (error) return { ok: false, mensaje: "No se pudo guardar: " + error.message };
     if ((archivo || quitarBanner) && actual?.banner_path) await supabase.storage.from(BUCKET).remove([actual.banner_path]);
     revalidatePath("/", "layout");
+    refrescarCache();
     return { ok: true, mensaje: "Apariencia guardada. Abre tu catálogo para verla." };
   } catch (e) {
     return { ok: false, mensaje: e instanceof Error ? e.message : "Error inesperado." };

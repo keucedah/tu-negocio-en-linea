@@ -4,7 +4,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import type { Categoria, Producto } from "@/lib/tienda/types";
 import type { Resultado } from "@/app/acciones-tienda";
-import { formatoPeso, optimizarCampo } from "@/lib/optimizarImagen";
+import { LADO_FOTO, LADO_MINI, formatoPeso, optimizarCampo, optimizarImagen, ponerArchivo } from "@/lib/optimizarImagen";
 
 type Props = {
   categorias: Categoria[];
@@ -15,6 +15,7 @@ type Props = {
 export default function FormularioProducto({ categorias, accion, producto }: Props) {
   const [resultado, enviar, enviando] = useActionState(accion, null);
   const formRef = useRef<HTMLFormElement>(null);
+  const miniRef = useRef<HTMLInputElement>(null);
   const [vista, setVista] = useState<string | null>(producto?.imagen_url ?? null);
   const [peso, setPeso] = useState<string | null>(null);
   const [optimizando, setOptimizando] = useState(false);
@@ -47,12 +48,16 @@ export default function FormularioProducto({ categorias, accion, producto }: Pro
               const input = e.currentTarget;
               const original = input.files?.[0];
               setPeso(null);
+              if (miniRef.current) ponerArchivo(miniRef.current, null);
               if (!original) {
                 setVista(producto?.imagen_url ?? null);
                 return;
               }
               setOptimizando(true);
-              const f = (await optimizarCampo(input)) ?? original;
+              const f = (await optimizarCampo(input, LADO_FOTO)) ?? original;
+              // Versión pequeña para la lista del catálogo y la App (solo si de verdad pesa menos)
+              const mini = await optimizarImagen(original, LADO_MINI);
+              if (miniRef.current && mini !== original && mini.size < f.size) ponerArchivo(miniRef.current, mini);
               setOptimizando(false);
               setVista(URL.createObjectURL(f));
               setPeso(f === original ? formatoPeso(f.size) : `${formatoPeso(f.size)} (antes ${formatoPeso(original.size)})`);
@@ -60,6 +65,7 @@ export default function FormularioProducto({ categorias, accion, producto }: Pro
             className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-marca-50 file:px-3 file:py-2 file:font-semibold file:text-marca-700 hover:file:bg-marca-100"
           />
         </div>
+        <input ref={miniRef} name="imagen_mini" type="file" accept="image/*" hidden tabIndex={-1} aria-hidden />
         {(optimizando || peso) && (
           <span className="block text-xs text-gray-500">{optimizando ? "Optimizando foto…" : `Foto lista: ${peso}`}</span>
         )}

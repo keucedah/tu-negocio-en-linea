@@ -10,6 +10,8 @@ export type Producto = {
   categoria_id: number | null;
   imagen_url: string | null;
   imagen_path?: string | null;
+  /** Foto pequeña (400 px) para la lista; null en fotos subidas antes de la versión 2.1. */
+  imagen_mini_url?: string | null;
   destacado?: boolean;
   orden_destacado?: number;
   creado_en: string;

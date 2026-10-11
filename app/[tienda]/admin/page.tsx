@@ -19,7 +19,7 @@ import {
 } from "@/app/acciones-tienda";
 import { cerrarSesion } from "@/app/acciones-entrar-tienda";
 import { obtenerAdminTienda } from "@/lib/supabase/server";
-import { aTienda, destacados, obtenerBase, obtenerCatalogo, obtenerFilaTienda } from "@/lib/tienda/datos";
+import { POR_PAGINA_PANEL, aTienda, obtenerBase, obtenerFilaTienda, obtenerPanelProductos } from "@/lib/tienda/datos";
 import { supabaseConfigurado } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
@@ -48,7 +48,7 @@ export default async function Admin({
   searchParams,
 }: {
   params: Promise<{ tienda: string }>;
-  searchParams: Promise<{ s?: string }>;
+  searchParams: Promise<{ s?: string; q?: string; pagina?: string }>;
 }) {
   if (!supabaseConfigurado) {
     return (
@@ -72,14 +72,24 @@ export default async function Admin({
     );
   }
 
-  const pedido = (await searchParams).s;
+  const sp = await searchParams;
+  const pedido = sp.s;
   const seccion: Seccion = SECCIONES.some((x) => x.id === pedido) ? (pedido as Seccion) : "productos";
-  const [{ categorias, productos }, base] = await Promise.all([obtenerCatalogo(fila.id), obtenerBase()]);
+  const q = (sp.q ?? "").slice(0, 60);
+  const [{ categorias, conteo, total, top, productos, encontrados, pagina }, base] = await Promise.all([
+    obtenerPanelProductos(fila.id, q, Math.floor(Number(sp.pagina)) || 1),
+    obtenerBase(),
+  ]);
   const tienda = aTienda(fila);
-  const top = destacados(productos);
   const nombreCat = new Map(categorias.map((c) => [c.id, c.nombre]));
-  const conteo = new Map<number, number>();
-  for (const p of productos) if (p.categoria_id) conteo.set(p.categoria_id, (conteo.get(p.categoria_id) ?? 0) + 1);
+  const paginas = Math.max(1, Math.ceil(encontrados / POR_PAGINA_PANEL));
+  const enlacePagina = (n: number) => {
+    const p = new URLSearchParams();
+    if (q) p.set("q", q);
+    if (n > 1) p.set("pagina", String(n));
+    const qs = p.toString();
+    return `${base}/admin${qs ? `?${qs}` : ""}`;
+  };
   const tipo = fila.tipo_negocio_otro || fila.tipo?.nombre;
 
   const destacar = cambiarDestacado.bind(null, fila.id);
@@ -140,15 +150,27 @@ export default async function Admin({
           </section>
 
           <section className={tarjeta}>
-            <h2 className="mb-1 text-lg font-bold">Productos ({productos.length})</h2>
+            <h2 className="mb-1 text-lg font-bold">Productos ({total})</h2>
             <p className="mb-3 text-xs text-gray-500">Toca la estrella para poner un producto en “Lo más vendido”.</p>
+            {total > POR_PAGINA_PANEL && (
+              <form action={`${base}/admin`} className="mb-3 flex gap-2">
+                <input type="search" name="q" defaultValue={q} placeholder="Buscar por nombre…" aria-label="Buscar producto" className="campo flex-1 py-2" />
+                <button className="boton-secundario">Buscar</button>
+              </form>
+            )}
+            {q && (
+              <p className="mb-2 text-sm text-gray-600">
+                {encontrados} {encontrados === 1 ? "resultado" : "resultados"} para “{q}” ·{" "}
+                <Link href={`${base}/admin`} className="font-medium text-marca-600 hover:underline">Ver todos</Link>
+              </p>
+            )}
             {productos.length === 0 ? (
-              <p className="text-sm text-gray-600">Aún no hay productos. Agrega el primero con el formulario.</p>
+              <p className="text-sm text-gray-600">{q ? "No hay productos con ese nombre." : "Aún no hay productos. Agrega el primero con el formulario."}</p>
             ) : (
               <ul className="divide-y">
                 {productos.map((p) => (
                   <li key={p.id} className="flex items-center gap-2 py-3 sm:gap-3">
-                    <ImagenProducto src={p.imagen_url} alt={p.nombre} className="h-14 w-14 shrink-0 rounded-lg sm:h-16 sm:w-16" />
+                    <ImagenProducto src={p.imagen_mini_url || p.imagen_url} alt={p.nombre} className="h-14 w-14 shrink-0 rounded-lg sm:h-16 sm:w-16" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{p.nombre}</p>
                       <p className="text-xs text-gray-500">{p.categoria_id ? nombreCat.get(p.categoria_id) : "Sin categoría"}</p>
@@ -165,6 +187,13 @@ export default async function Admin({
                   </li>
                 ))}
               </ul>
+            )}
+            {paginas > 1 && (
+              <nav className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm" aria-label="Páginas de productos">
+                {pagina > 1 && <Link href={enlacePagina(pagina - 1)} className="boton-secundario">‹ Anterior</Link>}
+                <span className="px-1 text-gray-600">Página {pagina} de {paginas}</span>
+                {pagina < paginas && <Link href={enlacePagina(pagina + 1)} className="boton-secundario">Siguiente ›</Link>}
+              </nav>
             )}
           </section>
         </div>
@@ -186,7 +215,7 @@ export default async function Admin({
               {top.map((p, i) => (
                 <li key={p.id} className="flex items-center gap-2 py-3 sm:gap-3">
                   <span className="w-5 shrink-0 text-center text-sm font-bold text-gray-400">{i + 1}</span>
-                  <ImagenProducto src={p.imagen_url} alt={p.nombre} className="h-10 w-10 shrink-0 rounded-lg sm:h-14 sm:w-14" />
+                  <ImagenProducto src={p.imagen_mini_url || p.imagen_url} alt={p.nombre} className="h-10 w-10 shrink-0 rounded-lg sm:h-14 sm:w-14" />
                   <p className="min-w-0 flex-1 truncate font-medium">{p.nombre}</p>
                   <form action={mover}>
                     <input type="hidden" name="id" value={p.id} />
@@ -231,7 +260,7 @@ export default async function Admin({
               {categorias.map((c) => (
                 <li key={c.id} className="flex items-center justify-between py-2">
                   <span>
-                    {c.nombre} <span className="text-gray-400">({conteo.get(c.id) ?? 0})</span>
+                    {c.nombre} <span className="text-gray-400">({conteo[c.id] ?? 0})</span>
                   </span>
                   <BotonEliminar
                     id={c.id}

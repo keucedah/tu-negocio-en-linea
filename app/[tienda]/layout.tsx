@@ -4,7 +4,7 @@ import { CartProvider } from "@/components/tienda/CartProvider";
 import Header from "@/components/tienda/Header";
 import CartDrawer from "@/components/tienda/CartDrawer";
 import { BaseTienda } from "@/components/tienda/BaseTienda";
-import { obtenerBase, obtenerTienda } from "@/lib/tienda/datos";
+import { obtenerBase, obtenerTiendaPublica as obtenerTienda } from "@/lib/tienda/datos";
 import { variablesTema } from "@/lib/tema";
 
 type Props = { params: Promise<{ tienda: string }> };

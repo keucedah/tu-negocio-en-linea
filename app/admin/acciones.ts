@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { refrescarCache } from "@/lib/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { obtenerAdminPanel } from "@/lib/supabase/server";
@@ -109,6 +110,7 @@ export async function guardarCliente(_prev: Resultado, f: FormData): Promise<Res
       if (error) return { ok: false, mensaje: "No se pudo guardar: " + error.message };
       const errSync = await sincronizar(supabase, id);
       revalidatePath("/admin", "layout");
+      refrescarCache();
       if (errSync) return { ok: false, mensaje: "Datos guardados. " + errSync };
       return { ok: true, mensaje: "Cambios guardados." };
     }
@@ -130,6 +132,7 @@ export async function guardarCliente(_prev: Resultado, f: FormData): Promise<Res
     return err(e);
   }
   revalidatePath("/admin", "layout");
+  refrescarCache();
   redirect(`/admin/clientes/${nuevoId}?nuevo=1${errorTienda ? "&error_tienda=" + encodeURIComponent(errorTienda) : ""}`);
 }
 
@@ -147,6 +150,7 @@ export async function crearTiendaCliente(_prev: Resultado, f: FormData): Promise
     if (!r.ok) return { ok: false, mensaje: r.mensaje };
     await recordarAcceso(id, correo.toLowerCase(), r.usuarioNuevo ? clave : "");
     revalidatePath("/admin", "layout");
+    refrescarCache();
     return {
       ok: true,
       mensaje: r.usuarioNuevo ? "Tienda creada." : "Tienda creada. Ese correo ya tenía usuario: entra con su contraseña de siempre.",
@@ -169,6 +173,7 @@ export async function cambiarClaveTienda(_prev: Resultado, f: FormData): Promise
     if (e) return { ok: false, mensaje: e };
     await recordarAcceso(id, String(f.get("correo") ?? ""), clave);
     revalidatePath("/admin", "layout");
+    refrescarCache();
     return { ok: true, mensaje: "Contraseña cambiada." };
   } catch (e) {
     return err(e);
@@ -186,6 +191,7 @@ export async function cambiarPlan(_prev: Resultado, f: FormData): Promise<Result
     if (error) return { ok: false, mensaje: error.message };
     const errSync = await sincronizar(supabase, id);
     revalidatePath("/admin", "layout");
+    refrescarCache();
     if (errSync) return { ok: false, mensaje: "Plan guardado. " + errSync };
     return { ok: true, mensaje: "Plan actualizado. Su tienda ya tiene el nuevo límite." };
   } catch (e) {
@@ -205,6 +211,7 @@ export async function eliminarCliente(id: number): Promise<Resultado> {
     return err(e);
   }
   revalidatePath("/admin", "layout");
+  refrescarCache();
   redirect("/admin");
 }
 
@@ -250,6 +257,8 @@ export async function registrarPago(_prev: Resultado, f: FormData): Promise<Resu
     }
 
     revalidatePath("/admin", "layout");
+
+    refrescarCache();
     return {
       ok: true,
       mensaje: meses > 0 ? `Pago registrado. Próximo pago movido ${meses === 1 ? "1 mes" : `${meses} meses`} adelante.` : "Pago registrado.",
@@ -275,6 +284,7 @@ export async function eliminarPago(id: number): Promise<Resultado> {
       }
     }
     revalidatePath("/admin", "layout");
+    refrescarCache();
     return { ok: true, mensaje: "Pago eliminado." };
   } catch (e) {
     return err(e);
@@ -318,6 +328,7 @@ export async function guardarPlan(_prev: Resultado, f: FormData): Promise<Result
       for (const c of conPlan ?? []) await sincronizar(supabase, c.id);
     }
     revalidatePath("/", "layout");
+    refrescarCache();
     return { ok: true, mensaje: id ? `Plan “${nombre}” actualizado.` : `Plan “${nombre}” creado.` };
   } catch (e) {
     return err(e);
@@ -334,6 +345,7 @@ export async function eliminarPlan(id: number): Promise<Resultado> {
       return { ok: false, mensaje: error.message };
     }
     revalidatePath("/", "layout");
+    refrescarCache();
     return { ok: true, mensaje: "Plan eliminado." };
   } catch (e) {
     return err(e);
@@ -376,6 +388,7 @@ export async function guardarTipo(_prev: Resultado, f: FormData): Promise<Result
       return { ok: false, mensaje: "No se pudo guardar: " + error.message };
     }
     revalidatePath("/", "layout");
+    refrescarCache();
     return { ok: true, mensaje: id ? `“${nombre}” actualizado.` : `“${nombre}” creado.` };
   } catch (e) {
     return err(e);
@@ -391,6 +404,7 @@ export async function eliminarTipo(id: number): Promise<Resultado> {
     const { error } = await supabase.from("tipos_negocio").delete().eq("id", id);
     if (error) return { ok: false, mensaje: error.message };
     revalidatePath("/", "layout");
+    refrescarCache();
     return { ok: true, mensaje: "Tipo de negocio eliminado." };
   } catch (e) {
     return err(e);
@@ -432,6 +446,7 @@ export async function guardarAjustes(_prev: Resultado, f: FormData): Promise<Res
       .eq("id", 1);
     if (error) return { ok: false, mensaje: "No se pudo guardar: " + error.message };
     revalidatePath("/", "layout");
+    refrescarCache();
     return { ok: true, mensaje: "Ajustes guardados." };
   } catch (e) {
     return err(e);
@@ -447,6 +462,7 @@ export async function marcarSolicitud(id: number, atendida: boolean): Promise<Re
     const { error } = await supabase.from("solicitudes_demo").update({ atendida }).eq("id", id);
     if (error) return { ok: false, mensaje: error.message };
     revalidatePath("/admin", "layout");
+    refrescarCache();
     return { ok: true, mensaje: atendida ? "Marcada como atendida." : "Marcada como pendiente." };
   } catch (e) {
     return err(e);
@@ -460,6 +476,7 @@ export async function eliminarSolicitud(id: number): Promise<Resultado> {
     const { error } = await supabase.from("solicitudes_demo").delete().eq("id", id);
     if (error) return { ok: false, mensaje: error.message };
     revalidatePath("/admin", "layout");
+    refrescarCache();
     return { ok: true, mensaje: "Solicitud eliminada." };
   } catch (e) {
     return err(e);
