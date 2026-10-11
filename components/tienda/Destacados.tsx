@@ -7,6 +7,7 @@ import ImagenProducto from "./ImagenProducto";
 import BotonAgregar from "./BotonAgregar";
 import { useBase } from "./BaseTienda";
 import EtiquetaNuevo from "./EtiquetaNuevo";
+import { lempiras } from "@/lib/precio";
 
 const SEGUNDOS = 5;
 
@@ -66,6 +67,7 @@ export default function Destacados({ productos }: { productos: Producto[] }) {
                 <Link href={`${base}/producto/${p.id}`} className="line-clamp-2 font-semibold hover:text-marca-700">
                   {p.nombre}
                 </Link>
+                {p.precio != null && <p className="text-lg font-bold text-marca-700">{lempiras(p.precio)}</p>}
                 <div className="mt-auto">
                   <BotonAgregar producto={p} />
                 </div>

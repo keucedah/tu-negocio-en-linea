@@ -3,11 +3,19 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 export type ItemCarrito = {
+  /** Identifica la línea del carrito: el mismo producto en otra talla es otra línea. */
+  clave: string;
   id: number;
   nombre: string;
   imagen_url: string | null;
+  /** Precio al momento de agregarlo; null si la tienda no lo muestra. */
+  precio?: number | null;
+  /** Talla elegida por el cliente, si el producto tiene tallas. */
+  talla?: string | null;
   cantidad: number;
 };
+
+const claveDe = (id: number, talla?: string | null) => (talla ? `${id}|${talla}` : String(id));
 
 type CarritoCtx = {
   items: ItemCarrito[];
@@ -15,9 +23,9 @@ type CarritoCtx = {
   abierto: boolean;
   abrir: () => void;
   cerrar: () => void;
-  agregar: (item: Omit<ItemCarrito, "cantidad">, cantidad?: number) => void;
-  cambiarCantidad: (id: number, cantidad: number) => void;
-  quitar: (id: number) => void;
+  agregar: (item: Omit<ItemCarrito, "cantidad" | "clave">, cantidad?: number) => void;
+  cambiarCantidad: (clave: string, cantidad: number) => void;
+  quitar: (clave: string) => void;
   vaciar: () => void;
 };
 
@@ -32,7 +40,8 @@ export function CartProvider({ clave, children }: { clave: string; children: Rea
   useEffect(() => {
     try {
       const guardado = localStorage.getItem(CLAVE);
-      if (guardado) setItems(JSON.parse(guardado));
+      // Los carritos guardados antes de las tallas no traen "clave": se le pone
+      if (guardado) setItems((JSON.parse(guardado) as ItemCarrito[]).map((i) => ({ ...i, clave: i.clave ?? claveDe(i.id, i.talla) })));
     } catch {
       // almacenamiento no disponible: el carrito funciona solo en esta visita
     }
@@ -46,17 +55,18 @@ export function CartProvider({ clave, children }: { clave: string; children: Rea
     } catch {}
   }, [items, cargado, CLAVE]);
 
-  const agregar = useCallback((item: Omit<ItemCarrito, "cantidad">, cantidad = 1) => {
+  const agregar = useCallback((item: Omit<ItemCarrito, "cantidad" | "clave">, cantidad = 1) => {
+    const clave = claveDe(item.id, item.talla);
     setItems((prev) => {
-      const existe = prev.find((i) => i.id === item.id);
-      if (existe) return prev.map((i) => (i.id === item.id ? { ...i, cantidad: i.cantidad + cantidad } : i));
-      return [...prev, { ...item, cantidad }];
+      const existe = prev.find((i) => i.clave === clave);
+      if (existe) return prev.map((i) => (i.clave === clave ? { ...i, ...item, cantidad: i.cantidad + cantidad } : i));
+      return [...prev, { ...item, clave, cantidad }];
     });
   }, []);
 
-  const cambiarCantidad = useCallback((id: number, cantidad: number) => {
+  const cambiarCantidad = useCallback((clave: string, cantidad: number) => {
     setItems((prev) =>
-      cantidad <= 0 ? prev.filter((i) => i.id !== id) : prev.map((i) => (i.id === id ? { ...i, cantidad } : i)),
+      cantidad <= 0 ? prev.filter((i) => i.clave !== clave) : prev.map((i) => (i.clave === clave ? { ...i, cantidad } : i)),
     );
   }, []);
 
@@ -69,7 +79,7 @@ export function CartProvider({ clave, children }: { clave: string; children: Rea
       cerrar: () => setAbierto(false),
       agregar,
       cambiarCantidad,
-      quitar: (id) => setItems((prev) => prev.filter((i) => i.id !== id)),
+      quitar: (clave) => setItems((prev) => prev.filter((i) => i.clave !== clave)),
       vaciar: () => setItems([]),
     }),
     [items, abierto, agregar, cambiarCantidad],

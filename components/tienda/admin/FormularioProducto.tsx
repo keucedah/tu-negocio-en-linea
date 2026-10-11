@@ -4,6 +4,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import type { Categoria, Producto } from "@/lib/tienda/types";
 import type { Resultado } from "@/app/acciones-tienda";
+import SelectorTallas from "./SelectorTallas";
 import { LADO_FOTO, LADO_MINI, formatoPeso, optimizarCampo, optimizarImagen, ponerArchivo } from "@/lib/optimizarImagen";
 
 type Props = {
@@ -19,11 +20,16 @@ export default function FormularioProducto({ categorias, accion, producto }: Pro
   const [vista, setVista] = useState<string | null>(producto?.imagen_url ?? null);
   const [peso, setPeso] = useState<string | null>(null);
   const [optimizando, setOptimizando] = useState(false);
+  const [conPrecio, setConPrecio] = useState(producto?.precio != null);
+  // Al guardar un producto nuevo el formulario se limpia; cambiar la clave reinicia las tallas
+  const [vuelta, setVuelta] = useState(0);
   const editando = Boolean(producto);
 
   useEffect(() => {
     if (resultado?.ok && !editando) {
       formRef.current?.reset();
+      setConPrecio(false);
+      setVuelta((n) => n + 1);
       setVista(null);
       setPeso(null);
     }
@@ -94,6 +100,41 @@ export default function FormularioProducto({ categorias, accion, producto }: Pro
           ))}
         </select>
       </label>
+
+      <div className="rounded-lg border px-3 py-2">
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="con_precio"
+            checked={conPrecio}
+            onChange={(e) => setConPrecio(e.target.checked)}
+            className="mt-0.5 h-4 w-4"
+          />
+          <span>
+            <span className="font-medium">Mostrar precio</span>
+            <span className="block text-xs text-gray-600">Si no lo marcas, el cliente pregunta el precio por WhatsApp.</span>
+          </span>
+        </label>
+        {conPrecio && (
+          <label className="mt-2 flex items-center gap-2">
+            <span className="text-sm font-semibold text-gray-700">L</span>
+            <input
+              name="precio"
+              inputMode="decimal"
+              required
+              autoFocus={!producto?.precio}
+              pattern="[0-9.,\s]+"
+              title="Solo números, por ejemplo 150 o 1250.50"
+              placeholder="0.00"
+              defaultValue={producto?.precio ?? ""}
+              className="campo max-w-[10rem]"
+              aria-label="Precio en lempiras"
+            />
+          </label>
+        )}
+      </div>
+
+      <SelectorTallas key={vuelta} iniciales={producto?.tallas ?? []} />
 
       <label className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm">
         <input type="checkbox" name="destacado" defaultChecked={producto?.destacado ?? false} className="mt-0.5 h-4 w-4" />

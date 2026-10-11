@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useCarrito } from "./CartProvider";
 import ImagenProducto from "./ImagenProducto";
-import { enlaceWhatsApp, mensajeCotizacion } from "@/lib/whatsapp";
+import { enlaceWhatsApp, mensajeCotizacion, totalPedido } from "@/lib/whatsapp";
+import { lempiras } from "@/lib/precio";
 
 export default function CartDrawer({ whatsapp }: { whatsapp: string }) {
   const { items, abierto, cerrar, cambiarCantidad, quitar, vaciar, totalUnidades } = useCarrito();
@@ -16,6 +17,8 @@ export default function CartDrawer({ whatsapp }: { whatsapp: string }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [abierto, cerrar]);
+
+  const total = totalPedido(items);
 
   const cotizar = () => {
     window.open(enlaceWhatsApp(whatsapp, mensajeCotizacion(items, { nombre, nota })), "_blank", "noopener");
@@ -52,13 +55,19 @@ export default function CartDrawer({ whatsapp }: { whatsapp: string }) {
           <>
             <ul className="flex-1 divide-y overflow-y-auto px-5">
               {items.map((i) => (
-                <li key={i.id} className="flex items-center gap-3 py-3">
+                <li key={i.clave} className="flex items-center gap-3 py-3">
                   <ImagenProducto src={i.imagen_url} alt={i.nombre} className="h-14 w-14 shrink-0 rounded-md" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{i.nombre}</p>
+                    {i.talla && <p className="text-xs font-semibold text-marca-700">Talla {i.talla}</p>}
+                    {i.precio != null && (
+                      <p className="text-xs text-gray-600">
+                        {lempiras(i.precio)} c/u{i.cantidad > 1 && <> · <span className="font-semibold text-gray-800">{lempiras(i.precio * i.cantidad)}</span></>}
+                      </p>
+                    )}
                     <div className="mt-1 flex items-center gap-1">
                       <button
-                        onClick={() => cambiarCantidad(i.id, i.cantidad - 1)}
+                        onClick={() => cambiarCantidad(i.clave, i.cantidad - 1)}
                         className="h-7 w-7 rounded border text-gray-700 hover:bg-gray-100"
                         aria-label="Restar uno"
                       >
@@ -68,12 +77,12 @@ export default function CartDrawer({ whatsapp }: { whatsapp: string }) {
                         type="number"
                         min={1}
                         value={i.cantidad}
-                        onChange={(e) => cambiarCantidad(i.id, Math.max(1, Number(e.target.value) || 1))}
+                        onChange={(e) => cambiarCantidad(i.clave, Math.max(1, Number(e.target.value) || 1))}
                         className="h-7 w-14 rounded border text-center text-sm"
                         aria-label="Cantidad"
                       />
                       <button
-                        onClick={() => cambiarCantidad(i.id, i.cantidad + 1)}
+                        onClick={() => cambiarCantidad(i.clave, i.cantidad + 1)}
                         className="h-7 w-7 rounded border text-gray-700 hover:bg-gray-100"
                         aria-label="Sumar uno"
                       >
@@ -81,7 +90,7 @@ export default function CartDrawer({ whatsapp }: { whatsapp: string }) {
                       </button>
                     </div>
                   </div>
-                  <button onClick={() => quitar(i.id)} className="text-xs text-gray-500 hover:text-red-600">
+                  <button onClick={() => quitar(i.clave)} className="text-xs text-gray-500 hover:text-red-600">
                     Quitar
                   </button>
                 </li>
@@ -89,6 +98,12 @@ export default function CartDrawer({ whatsapp }: { whatsapp: string }) {
             </ul>
 
             <div className="space-y-3 border-t bg-gray-50 px-5 py-4">
+              {total && (
+                <p className="flex items-baseline justify-between text-sm">
+                  <span className="text-gray-600">{total.completo ? "Total" : "Total de los productos con precio"}</span>
+                  <span className="text-xl font-black text-gray-900">{lempiras(total.monto)}</span>
+                </p>
+              )}
               <input
                 className="campo"
                 placeholder="Tu nombre (opcional)"

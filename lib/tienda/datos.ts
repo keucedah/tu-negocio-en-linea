@@ -14,7 +14,7 @@ import { POR_PAGINA, normalizar, type Filtros, type Orden } from "./filtros";
 export { leerFiltros } from "./filtros";
 
 const COLUMNAS_PRODUCTO =
-  "id, nombre, descripcion, categoria_id, imagen_url, imagen_path, imagen_mini_url, destacado, orden_destacado, creado_en";
+  "id, nombre, descripcion, categoria_id, imagen_url, imagen_path, imagen_mini_url, precio, tallas, destacado, orden_destacado, creado_en";
 const COLUMNAS_TIENDA =
   "id, slug, nombre_tienda, logo_url, logo_path, codigo_pais, celular, activa, tipo_negocio_id, tipo_negocio_otro, " +
   "color_principal, color_encabezado, titulo_portada, texto_portada, texto_buscador, banner_url, banner_path, " +

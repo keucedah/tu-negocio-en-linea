@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { CartProvider } from "@/components/tienda/CartProvider";
 import Header from "@/components/tienda/Header";
 import CartDrawer from "@/components/tienda/CartDrawer";
+import WhatsAppFlotante from "@/components/tienda/WhatsAppFlotante";
 import { BaseTienda } from "@/components/tienda/BaseTienda";
 import { obtenerBase, obtenerTiendaPublica as obtenerTienda } from "@/lib/tienda/datos";
 import { variablesTema } from "@/lib/tema";
@@ -46,6 +47,7 @@ export default async function LayoutTienda({ params, children }: Props & { child
             )}
             © {new Date().getFullYear()} {tienda.nombre}. Precios y disponibilidad por WhatsApp.
           </footer>
+          <WhatsAppFlotante whatsapp={tienda.whatsapp} tienda={tienda.nombre} />
           <CartDrawer whatsapp={tienda.whatsapp} />
         </CartProvider>
       </BaseTienda>

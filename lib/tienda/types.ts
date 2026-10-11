@@ -15,6 +15,10 @@ export type Producto = {
   destacado?: boolean;
   orden_destacado?: number;
   creado_en: string;
+  /** Precio en lempiras; null = el dueño no quiso mostrar precio. */
+  precio?: number | null;
+  /** Tallas para elegir (calzado, ropa…). Vacía o ausente = sin tallas. */
+  tallas?: string[];
   /** Subido en los últimos días: la lista le pone la etiqueta "Nuevo". */
   nuevo?: boolean;
 };

@@ -9,6 +9,7 @@ import ImagenProducto from "./ImagenProducto";
 import BotonAgregar from "./BotonAgregar";
 import { useBase } from "./BaseTienda";
 import EtiquetaNuevo from "./EtiquetaNuevo";
+import { lempiras } from "@/lib/precio";
 import { useAparecer } from "./useAparecer";
 
 // La búsqueda espera a que el cliente deje de escribir antes de pedir resultados.
@@ -170,6 +171,10 @@ export default function Catalogo({
                   {p.nombre}
                 </Link>
                 <p className="line-clamp-2 flex-1 text-sm text-gray-600">{p.descripcion}</p>
+                {p.tallas && p.tallas.length > 0 && (
+                  <p className="line-clamp-1 text-xs text-gray-500">Tallas: {p.tallas.join(" · ")}</p>
+                )}
+                {p.precio != null && <p className="text-lg font-bold text-marca-700">{lempiras(p.precio)}</p>}
                 <BotonAgregar producto={p} />
               </div>
             </li>

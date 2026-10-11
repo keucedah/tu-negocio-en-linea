@@ -7,6 +7,8 @@ import { obtenerAdminTienda } from "@/lib/supabase/server";
 import { normalizarCelular } from "@/lib/telefono";
 import { obtenerBase } from "@/lib/tienda/datos";
 import { normalizarColor } from "@/lib/tema";
+import { leerPrecio } from "@/lib/precio";
+import { limpiarTallas } from "@/lib/tallas";
 
 export type Resultado = { ok: boolean; mensaje: string } | null;
 
@@ -32,13 +34,25 @@ function leerProducto(formData: FormData) {
   const imagen = formData.get("imagen");
   const archivo = imagen instanceof File && imagen.size > 0 ? imagen : null;
   const destacado = formData.get("destacado") === "on";
+  // Precio opcional: solo cuenta si el dueño marcó "Mostrar precio"
+  const precio = formData.get("con_precio") === "on" ? leerPrecio(String(formData.get("precio") ?? "")) : null;
+  // Tallas: solo si el dueño marcó "Tiene tallas"; llegan como lista en JSON
+  let tallas: string[] = [];
+  const conTallas = formData.get("con_tallas") === "on";
+  if (conTallas) {
+    try {
+      tallas = limpiarTallas(JSON.parse(String(formData.get("tallas") ?? "[]")));
+    } catch {
+      tallas = [];
+    }
+  }
   // Foto pequeña para la lista (la hace el navegador). Si falta o no sirve, la lista usa la grande.
   const mini = formData.get("imagen_mini");
   const archivoMini =
     archivo && mini instanceof File && mini.size > 0 && mini.size <= MAX_BYTES_MINI && TIPOS.includes(mini.type) && mini.size < archivo.size
       ? mini
       : null;
-  return { nombre, descripcion, categoria_id: Number.isInteger(categoria) && categoria > 0 ? categoria : null, archivo, archivoMini, destacado };
+  return { nombre, descripcion, categoria_id: Number.isInteger(categoria) && categoria > 0 ? categoria : null, archivo, archivoMini, destacado, precio, tallas, conTallas };
 }
 
 /** Sube la foto y, si hay, su versión pequeña. */
@@ -100,8 +114,10 @@ async function siguienteOrden(supabase: Awaited<ReturnType<typeof exigirAdmin>>,
 export async function crearProducto(tiendaId: number, _prev: Resultado, formData: FormData): Promise<Resultado> {
   try {
     const supabase = await exigirAdmin(tiendaId);
-    const { nombre, descripcion, categoria_id, archivo, archivoMini, destacado } = leerProducto(formData);
+    const { nombre, descripcion, categoria_id, archivo, archivoMini, destacado, precio, tallas, conTallas } = leerProducto(formData);
     if (!nombre) return { ok: false, mensaje: "El nombre es obligatorio." };
+    if (precio === "invalido") return { ok: false, mensaje: "Escribe el precio solo con números, por ejemplo 150 o 1250.50." };
+    if (conTallas && tallas.length === 0) return { ok: false, mensaje: "Marca al menos una talla o quita la casilla “Tiene tallas”." };
     if (!categoria_id) return { ok: false, mensaje: "Elige una categoría." };
     if (!archivo) return { ok: false, mensaje: "Sube una imagen del producto." };
     const errImg = validarImagen(archivo);
@@ -115,6 +131,8 @@ export async function crearProducto(tiendaId: number, _prev: Resultado, formData
         nombre,
         descripcion,
         categoria_id,
+        precio,
+        tallas,
         destacado,
         orden_destacado: destacado ? await siguienteOrden(supabase, tiendaId) : 0,
         ...imagen,
@@ -136,8 +154,10 @@ export async function actualizarProducto(tiendaId: number, _prev: Resultado, for
   try {
     const supabase = await exigirAdmin(tiendaId);
     const id = Number(formData.get("id"));
-    const { nombre, descripcion, categoria_id, archivo, archivoMini, destacado } = leerProducto(formData);
+    const { nombre, descripcion, categoria_id, archivo, archivoMini, destacado, precio, tallas, conTallas } = leerProducto(formData);
     if (!nombre) return { ok: false, mensaje: "El nombre es obligatorio." };
+    if (precio === "invalido") return { ok: false, mensaje: "Escribe el precio solo con números, por ejemplo 150 o 1250.50." };
+    if (conTallas && tallas.length === 0) return { ok: false, mensaje: "Marca al menos una talla o quita la casilla “Tiene tallas”." };
     if (!categoria_id) return { ok: false, mensaje: "Elige una categoría." };
     const errImg = validarImagen(archivo);
     if (errImg) return { ok: false, mensaje: errImg };
@@ -149,7 +169,7 @@ export async function actualizarProducto(tiendaId: number, _prev: Resultado, for
       .eq("tienda_id", tiendaId)
       .maybeSingle();
     if (!actual) return { ok: false, mensaje: "Ese producto no existe en esta tienda." };
-    const cambios: Record<string, unknown> = { nombre, descripcion, categoria_id, destacado };
+    const cambios: Record<string, unknown> = { nombre, descripcion, categoria_id, precio, tallas, destacado };
     if (destacado && !actual.destacado) cambios.orden_destacado = await siguienteOrden(supabase, tiendaId);
     if (archivo) Object.assign(cambios, await subirFotos(supabase, tiendaId, archivo, archivoMini));
 

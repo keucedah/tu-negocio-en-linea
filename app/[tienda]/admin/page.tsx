@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ImagenProducto from "@/components/tienda/ImagenProducto";
+import { lempiras } from "@/lib/precio";
 import FormularioProducto from "@/components/tienda/admin/FormularioProducto";
 import FormularioCategoria from "@/components/tienda/admin/FormularioCategoria";
 import FormularioTienda from "@/components/tienda/admin/FormularioTienda";
@@ -173,7 +174,10 @@ export default async function Admin({
                     <ImagenProducto src={p.imagen_mini_url || p.imagen_url} alt={p.nombre} className="h-14 w-14 shrink-0 rounded-lg sm:h-16 sm:w-16" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{p.nombre}</p>
-                      <p className="text-xs text-gray-500">{p.categoria_id ? nombreCat.get(p.categoria_id) : "Sin categoría"}</p>
+                      <p className="text-xs text-gray-500">
+                        {p.categoria_id ? nombreCat.get(p.categoria_id) : "Sin categoría"}
+                        {p.precio != null && <span className="font-semibold text-gray-700"> · {lempiras(p.precio)}</span>}
+                      </p>
                       <div className="mt-1 flex gap-4 sm:hidden">
                         <Link href={`${base}/admin/producto/${p.id}`} className="text-sm font-medium text-marca-600 hover:underline">Editar</Link>
                         <BotonEliminar id={p.id} accion={eliminarProducto.bind(null, fila.id)} confirmacion={`¿Eliminar “${p.nombre}”?`} />

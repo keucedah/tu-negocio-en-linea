@@ -1,6 +1,8 @@
 import Link from "next/link";
 import FormularioDemo from "@/components/panel/FormularioDemo";
 import Celular from "@/components/panel/Celular";
+import CelularAnimado from "@/components/panel/CelularAnimado";
+import Revelar from "@/components/Revelar";
 import Marca, { Simbolo } from "@/components/Marca";
 import {
   IcoBolsa, IcoCaja, IcoCarrito, IcoCategorias, IcoCelular, IcoCheck, IcoCorreo, IcoEngrane, IcoEstrella, IcoGlobo, IcoImagen, IcoPaleta, IcoUbicacion, IcoWhatsApp,
@@ -49,6 +51,8 @@ export default async function Inicio() {
     ? `https://wa.me/${whatsapp}?text=${encodeURIComponent("Hola, quiero información sobre la tienda en línea para mi negocio.")}`
     : "#contacto";
   const visibles = planes.filter((p) => p.visible);
+  // Con tres planes o más se resalta el del medio como recomendado
+  const recomendado = visibles.length >= 3 ? visibles[Math.floor((visibles.length - 1) / 2)].id : null;
 
   return (
     <div className="bg-white">
@@ -104,7 +108,7 @@ export default async function Inicio() {
             )}
           </div>
           <div className="relative mx-auto w-full max-w-md">
-            <Celular src="/capturas/tienda.webp" alt="Tienda en línea en un celular" prioridad />
+            <CelularAnimado />
             <Simbolo className="absolute -left-2 top-4 hidden h-24 w-24 drop-shadow-xl sm:block" />
           </div>
         </div>
@@ -115,9 +119,9 @@ export default async function Inicio() {
         <div className="mx-auto max-w-6xl px-4">
           <h2 className="text-center text-3xl font-black text-marino-900">Todo lo que incluye</h2>
           <p className="mx-auto mt-2 max-w-2xl text-center text-gray-600">Tu tienda lista y funcionando, fácil de usar para ti y para tus clientes.</p>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Revelar className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {FUNCIONES.map(({ icono: Icono, titulo, texto }) => (
-              <div key={titulo} className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
+              <div key={titulo} className="tarjeta-plan rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
                 <span className={`flex h-12 w-12 items-center justify-center rounded-full text-white ${titulo.includes("WhatsApp") ? "bg-[#25D366]" : "bg-marca-500"}`}>
                   <Icono />
                 </span>
@@ -125,7 +129,7 @@ export default async function Inicio() {
                 <p className="mt-1 text-sm text-gray-600">{texto}</p>
               </div>
             ))}
-          </div>
+          </Revelar>
         </div>
       </section>
 
@@ -133,14 +137,14 @@ export default async function Inicio() {
       <section className="py-16">
         <div className="mx-auto max-w-6xl px-4">
           <h2 className="text-center text-3xl font-black text-marino-900">Así se ve</h2>
-          <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-5">
+          <Revelar className="mt-10 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-5">
             {CAPTURAS.map((c) => (
               <figure key={c.titulo} className="text-center">
                 <Celular src={c.src} alt={c.titulo} />
                 <figcaption className="mx-auto mt-2 inline-block rounded-full bg-marca-500 px-4 py-1.5 text-sm font-bold text-white">{c.titulo}</figcaption>
               </figure>
             ))}
-          </div>
+          </Revelar>
         </div>
       </section>
 
@@ -151,7 +155,7 @@ export default async function Inicio() {
           <p className="mx-auto mt-2 max-w-2xl text-center text-gray-300">Un solo pago de instalación y una mensualidad según la cantidad de productos.</p>
 
           <div className="mt-10 grid gap-6 lg:grid-cols-[1fr_2fr]">
-            <div className="rounded-2xl bg-white p-6 text-gray-900">
+            <div className="tarjeta-plan rounded-2xl bg-white p-6 text-gray-900">
               <div className="flex items-center gap-3">
                 <span className="flex h-12 w-12 items-center justify-center rounded-full bg-marino-800 text-white"><IcoEngrane /></span>
                 <h3 className="text-lg font-bold">Instalación y configuración</h3>
@@ -169,12 +173,21 @@ export default async function Inicio() {
               <p className="mb-3 text-lg font-bold">
                 Mensualidad <span className="font-normal text-gray-300">según la cantidad de productos</span>
               </p>
-              <div className="grid gap-4 sm:grid-cols-3">
+              <Revelar className="grid gap-4 pt-3 sm:grid-cols-3">
                 {visibles.map((p) => {
                   const c = COLOR_PLAN[p.color];
+                  const destacado = p.id === recomendado;
                   return (
-                    <div key={p.id} className="overflow-hidden rounded-2xl bg-white text-gray-900">
-                      <div className={`${c.cabecera} px-4 py-3 text-center text-white`}>
+                    <div
+                      key={p.id}
+                      className={`tarjeta-plan relative rounded-2xl bg-white text-gray-900 ${destacado ? "ring-4 ring-yellow-300 sm:-mt-3 sm:mb-3" : ""}`}
+                    >
+                      {destacado && (
+                        <span className="absolute -top-3 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-yellow-300 px-3 py-0.5 text-xs font-black uppercase tracking-wide text-marino-900 shadow">
+                          Recomendado
+                        </span>
+                      )}
+                      <div className={`${c.cabecera} rounded-t-2xl px-4 py-3 text-center text-white`}>
                         <p className="text-xl font-black">{p.nombre}</p>
                         {p.subtitulo && <p className="text-xs opacity-90">{p.subtitulo}</p>}
                       </div>
@@ -191,7 +204,7 @@ export default async function Inicio() {
                     </div>
                   );
                 })}
-              </div>
+              </Revelar>
 
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div className="flex items-center gap-4 rounded-2xl bg-white p-4 text-gray-900">
@@ -215,7 +228,7 @@ export default async function Inicio() {
 
       {/* Contacto */}
       <section id="contacto" className="scroll-mt-16 py-16">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 md:grid-cols-2">
+        <Revelar className="mx-auto grid max-w-6xl gap-8 px-4 md:grid-cols-2">
           <div>
             <h2 className="text-3xl font-black text-marino-900">Solicita una demostración</h2>
             <p className="mt-2 text-gray-600">Te mostramos cómo quedaría la tienda de tu negocio, sin compromiso.</p>
@@ -248,7 +261,7 @@ export default async function Inicio() {
           <div className="tarjeta">
             <FormularioDemo whatsapp={whatsapp} />
           </div>
-        </div>
+        </Revelar>
       </section>
 
       <footer className="bg-marino-950 py-8 text-center text-sm text-gray-400">

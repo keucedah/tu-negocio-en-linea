@@ -5,6 +5,7 @@ import BotonAgregar from "@/components/tienda/BotonAgregar";
 import NoDisponible from "@/components/tienda/NoDisponible";
 import { obtenerBase, obtenerProductoPublico as obtenerProducto, obtenerTiendaPublica as obtenerTienda } from "@/lib/tienda/datos";
 import { enlaceWhatsApp, mensajeCotizacion } from "@/lib/whatsapp";
+import { lempiras } from "@/lib/precio";
 
 export const dynamic = "force-dynamic";
 
@@ -36,12 +37,13 @@ export default async function PaginaProducto({ params }: { params: Promise<{ tie
             <span className="text-sm font-medium uppercase tracking-wide text-marca-600">{categoria.nombre}</span>
           )}
           <h1 className="text-2xl font-bold">{producto.nombre}</h1>
+          {producto.precio != null && <p className="text-3xl font-black text-marca-700">{lempiras(producto.precio)}</p>}
           <p className="whitespace-pre-line text-gray-700">{producto.descripcion}</p>
           <div className="mt-auto space-y-2">
             <BotonAgregar producto={producto} grande />
             {tienda.whatsapp && (
             <a
-              href={enlaceWhatsApp(tienda.whatsapp, mensajeCotizacion([{ nombre: producto.nombre, cantidad: 1 }]))}
+              href={enlaceWhatsApp(tienda.whatsapp, mensajeCotizacion([{ nombre: producto.nombre, cantidad: 1, precio: producto.precio }]))}
               target="_blank"
               rel="noopener noreferrer"
               className="boton-whatsapp w-full py-3 text-base"

@@ -587,3 +587,18 @@ update public.tiendas
 --    Las fotos subidas antes quedan sin pequeña y se sigue usando la grande.
 alter table public.productos add column if not exists imagen_mini_url text;
 alter table public.productos add column if not exists imagen_mini_path text;
+
+-- ===========================================================================
+-- Versión 2.2: precio y tallas opcionales en los productos.
+-- ===========================================================================
+alter table public.productos add column if not exists precio numeric(12, 2);
+alter table public.productos add column if not exists tallas text[] not null default '{}';
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'productos_precio_check') then
+    alter table public.productos add constraint productos_precio_check check (precio is null or precio >= 0);
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'productos_tallas_check') then
+    alter table public.productos add constraint productos_tallas_check check (cardinality(tallas) <= 40);
+  end if;
+end $$;

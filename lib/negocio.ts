@@ -1,6 +1,9 @@
 // Cálculos del negocio: cuotas, fechas de pago, estado de cobro y mensajes de WhatsApp.
+import { lempiras } from "./precio";
 import { formatearCelular, numeroWhatsApp } from "./telefono";
 import type { Ajustes, Cliente, Plan } from "./panel/types";
+
+export { lempiras };
 
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 
@@ -31,10 +34,6 @@ export function diasHasta(iso: string, desde = hoy()): number {
   const a = Date.parse(iso.slice(0, 10) + "T00:00:00Z");
   const b = Date.parse(desde + "T00:00:00Z");
   return Math.round((a - b) / 86400000);
-}
-
-export function lempiras(n: number): string {
-  return "L " + n.toLocaleString("es-HN", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
 }
 
 export function cuotaMensual(cliente: Cliente, plan: Plan | undefined, ajustes: Ajustes): number {
