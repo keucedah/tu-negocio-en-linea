@@ -6,6 +6,7 @@ import type { Producto } from "@/lib/tienda/types";
 import ImagenProducto from "./ImagenProducto";
 import BotonAgregar from "./BotonAgregar";
 import { useBase } from "./BaseTienda";
+import EtiquetaNuevo from "./EtiquetaNuevo";
 
 const SEGUNDOS = 5;
 
@@ -54,11 +55,12 @@ export default function Destacados({ productos }: { productos: Producto[] }) {
             </div>
           )}
         </div>
-        <div ref={pista} className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div ref={pista} className="-mt-2 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-3 pt-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {productos.map((p) => (
-            <article key={p.id} className="flex w-[70%] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border bg-white shadow-sm sm:w-[calc(33.333%-11px)] lg:w-[calc(25%-12px)]">
-              <Link href={`${base}/producto/${p.id}`} className="block">
-                <ImagenProducto src={p.imagen_url} alt={p.nombre} className="aspect-square w-full" />
+            <article key={p.id} className="tarjeta-producto group flex w-[70%] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border bg-white shadow-sm sm:w-[calc(33.333%-11px)] lg:w-[calc(25%-12px)]">
+              <Link href={`${base}/producto/${p.id}`} className="relative block overflow-hidden">
+                <ImagenProducto src={p.imagen_url} alt={p.nombre} className="foto-zoom aspect-square w-full" />
+                {p.nuevo && <EtiquetaNuevo />}
               </Link>
               <div className="flex flex-1 flex-col gap-2 p-3">
                 <Link href={`${base}/producto/${p.id}`} className="line-clamp-2 font-semibold hover:text-marca-700">

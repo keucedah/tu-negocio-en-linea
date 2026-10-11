@@ -26,6 +26,7 @@ export default function Header({ tienda }: { tienda: Tienda }) {
         <div className="flex items-center gap-3">
           <button
             onClick={abrir}
+            data-carrito
             className="relative flex items-center gap-2 rounded-lg bg-encabezado-texto/10 px-3 py-2 text-sm font-medium hover:bg-encabezado-texto/20"
             aria-label="Abrir mi pedido"
           >
@@ -36,7 +37,7 @@ export default function Header({ tienda }: { tienda: Tienda }) {
             </svg>
             <span className="hidden sm:inline">Mi pedido</span>
             {totalUnidades > 0 && (
-              <span className="absolute -right-2 -top-2 min-w-5 rounded-full bg-marca-500 px-1.5 text-center text-xs font-bold leading-5 text-white">
+              <span key={totalUnidades} className="animar-rebote absolute -right-2 -top-2 min-w-5 rounded-full bg-marca-500 px-1.5 text-center text-xs font-bold leading-5 text-white">
                 {totalUnidades}
               </span>
             )}

@@ -15,6 +15,8 @@ export type Producto = {
   destacado?: boolean;
   orden_destacado?: number;
   creado_en: string;
+  /** Subido en los últimos días: la lista le pone la etiqueta "Nuevo". */
+  nuevo?: boolean;
 };
 
 /** Textos y colores sugeridos de un tipo de negocio. */

@@ -8,6 +8,16 @@ Plataforma SaaS de catálogos en línea: tu página, tu panel de clientes y la t
 
 Los pasos completos están en la guía `guia-plataforma.pdf`.
 
+## Novedades de la 2.2 (catálogo con movimiento)
+
+Solo cambia el sitio web: no hay SQL nuevo ni cambios en la App.
+
+- Las tarjetas de productos aparecen con un efecto suave al bajar la página.
+- Al pasar el mouse (o tocar en el teléfono) la tarjeta se levanta y la foto hace un zoom ligero.
+- Al agregar al carrito, la foto vuela hasta "Mi pedido" y el número rebota.
+- Los productos subidos en los últimos 7 días llevan la etiqueta **Nuevo** (se cambia en `DIAS_NUEVO`, `app/[tienda]/page.tsx`).
+- Si el cliente activó "menos animaciones" en su teléfono o computadora, todo se ve quieto.
+
 ## Actualizar de la 2.0 a la 2.1 (optimización)
 
 1. En Supabase > SQL Editor pega todo `supabase/optimizacion-2.1.sql` y pulsa **Run**. Se puede correr más de una vez.

@@ -29,7 +29,7 @@ export default async function PaginaProducto({ params }: { params: Promise<{ tie
           </>
         )}
       </nav>
-      <div className="grid gap-6 rounded-2xl border bg-white p-4 shadow-sm md:grid-cols-2 md:p-6">
+      <div data-ficha className="grid gap-6 rounded-2xl border bg-white p-4 shadow-sm md:grid-cols-2 md:p-6">
         <ImagenProducto src={producto.imagen_url} alt={producto.nombre} className="aspect-square w-full rounded-xl" />
         <div className="flex flex-col gap-4">
           {categoria && (

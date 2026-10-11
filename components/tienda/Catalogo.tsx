@@ -8,6 +8,8 @@ import { POR_PAGINA, type Filtros } from "@/lib/tienda/filtros";
 import ImagenProducto from "./ImagenProducto";
 import BotonAgregar from "./BotonAgregar";
 import { useBase } from "./BaseTienda";
+import EtiquetaNuevo from "./EtiquetaNuevo";
+import { useAparecer } from "./useAparecer";
 
 // La búsqueda espera a que el cliente deje de escribir antes de pedir resultados.
 const ESPERA_BUSQUEDA = 350;
@@ -47,6 +49,7 @@ export default function Catalogo({
   useEffect(() => setBusqueda((b) => (b.trim() === filtros.q ? b : filtros.q)), [filtros.q]);
 
   const inicioLista = useRef<HTMLParagraphElement>(null);
+  const lista = useAparecer<HTMLUListElement>(productos);
 
   // Cambiar un filtro vuelve a la página 1. Cambiar de página queda en el historial (botón atrás).
   const actualizarUrl = (cambios: Record<string, string | null>, nuevaEntrada = false) => {
@@ -148,12 +151,14 @@ export default function Catalogo({
         </div>
       ) : (
         <ul
+          ref={lista}
           className={`mt-4 grid grid-cols-2 gap-3 transition-opacity sm:gap-4 md:grid-cols-3 lg:grid-cols-4 ${cargando ? "opacity-60" : ""}`}
         >
           {enPagina.map((p) => (
-            <li key={p.id} className="group flex flex-col overflow-hidden rounded-xl border bg-white shadow-sm transition hover:shadow-md">
-              <Link href={`${base}/producto/${p.id}`} className="block">
-                <ImagenProducto src={p.imagen_url} alt={p.nombre} className="aspect-square w-full" />
+            <li key={p.id} className="tarjeta-producto group flex flex-col overflow-hidden rounded-xl border bg-white shadow-sm">
+              <Link href={`${base}/producto/${p.id}`} className="relative block overflow-hidden">
+                <ImagenProducto src={p.imagen_url} alt={p.nombre} className="foto-zoom aspect-square w-full" />
+                {p.nuevo && <EtiquetaNuevo />}
               </Link>
               <div className="flex flex-1 flex-col gap-2 p-3">
                 {p.categoria_id && (

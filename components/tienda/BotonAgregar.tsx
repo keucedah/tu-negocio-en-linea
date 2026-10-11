@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useCarrito } from "./CartProvider";
 import type { Producto } from "@/lib/tienda/types";
+import { volarAlCarrito } from "./volarAlCarrito";
 
 export default function BotonAgregar({ producto, grande = false }: { producto: Producto; grande?: boolean }) {
   const { agregar } = useCarrito();
@@ -12,6 +13,7 @@ export default function BotonAgregar({ producto, grande = false }: { producto: P
     <button
       onClick={(e) => {
         e.preventDefault();
+        volarAlCarrito(e.currentTarget);
         agregar({ id: producto.id, nombre: producto.nombre, imagen_url: producto.imagen_mini_url || producto.imagen_url });
         setAgregado(true);
         setTimeout(() => setAgregado(false), 1200);

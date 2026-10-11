@@ -9,6 +9,9 @@ import { supabaseConfigurado } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
+// Días que un producto lleva la etiqueta "Nuevo" desde que se sube
+const DIAS_NUEVO = 7;
+
 export default async function Inicio({
   params,
   searchParams,
@@ -21,10 +24,12 @@ export default async function Inicio({
   if (!tienda.activa) return <NoDisponible nombre={tienda.nombre} />;
   const catalogo = await obtenerPaginaCatalogo(tienda.id, leerFiltros(await searchParams));
   // Lista y carrusel con la foto pequeña (si el producto la tiene); la grande queda para la ficha
-  const top = catalogo.destacados.map((p) => ({ ...p, imagen_url: p.imagen_mini_url || p.imagen_url }));
+  const ahora = Date.now();
+  const esNuevo = (creado: string) => ahora - Date.parse(creado) < DIAS_NUEVO * 86_400_000;
+  const top = catalogo.destacados.map((p) => ({ ...p, imagen_url: p.imagen_mini_url || p.imagen_url, nuevo: esNuevo(p.creado_en) }));
   // A la lista solo van los datos que muestra (la descripción ya sale cortada a 2 líneas)
   const productos = catalogo.productos.map(({ id, nombre, descripcion, categoria_id, imagen_url, imagen_mini_url, creado_en }) => ({
-    id, nombre, categoria_id, creado_en,
+    id, nombre, categoria_id, creado_en, nuevo: esNuevo(creado_en),
     imagen_url: imagen_mini_url || imagen_url,
     descripcion: descripcion.length > 140 ? descripcion.slice(0, 137).trimEnd() + "…" : descripcion,
   }));

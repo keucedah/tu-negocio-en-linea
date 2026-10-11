@@ -56,3 +56,40 @@ body {
     @apply rounded-2xl border bg-white p-5 shadow-sm;
   }
 }
+
+/* ---- Movimiento del catálogo (se apaga si el cliente pidió menos animaciones) ---- */
+@media (prefers-reduced-motion: no-preference) {
+  .tarjeta-producto {
+    transition: transform 0.25s ease, box-shadow 0.25s ease, opacity 0.5s ease;
+  }
+  .tarjeta-producto:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px -8px rgb(0 0 0 / 0.18);
+  }
+  .tarjeta-producto .foto-zoom {
+    transition: transform 0.5s ease;
+  }
+  .tarjeta-producto:hover .foto-zoom {
+    transform: scale(1.06);
+  }
+  /* Al tocar en el teléfono también se nota un poco */
+  .tarjeta-producto:active .foto-zoom {
+    transform: scale(1.04);
+  }
+
+  .por-aparecer {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  .animar-rebote {
+    animation: rebote 0.45s ease;
+  }
+}
+
+@keyframes rebote {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.45); }
+  65% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
