@@ -1,0 +1,309 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { obtenerAdminTienda } from "@/lib/supabase/server";
+import { normalizarCelular } from "@/lib/telefono";
+import { obtenerBase } from "@/lib/tienda/datos";
+import { normalizarColor } from "@/lib/tema";
+
+export type Resultado = { ok: boolean; mensaje: string } | null;
+
+const TIPOS = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const MAX_BYTES = 5 * 1024 * 1024;
+const BUCKET = "imagenes";
+const MAX_DESTACADOS = 12;
+
+// Todas las acciones reciben la tienda: solo su dueño (o el administrador del panel) puede usarlas.
+// La base de datos vuelve a comprobarlo con sus reglas (RLS).
+async function exigirAdmin(tiendaId: number) {
+  if (!Number.isInteger(tiendaId) || tiendaId <= 0) throw new Error("Tienda no válida");
+  const { supabase, esAdmin } = await obtenerAdminTienda(tiendaId);
+  if (!esAdmin) throw new Error("No autorizado");
+  return supabase;
+}
+
+function leerProducto(formData: FormData) {
+  const nombre = String(formData.get("nombre") ?? "").trim();
+  const descripcion = String(formData.get("descripcion") ?? "").trim();
+  const categoria = Number(formData.get("categoria_id"));
+  const imagen = formData.get("imagen");
+  const archivo = imagen instanceof File && imagen.size > 0 ? imagen : null;
+  const destacado = formData.get("destacado") === "on";
+  return { nombre, descripcion, categoria_id: Number.isInteger(categoria) && categoria > 0 ? categoria : null, archivo, destacado };
+}
+
+function validarImagen(archivo: File | null): string | null {
+  if (!archivo) return null;
+  if (!TIPOS.includes(archivo.type)) return "La imagen debe ser JPG, PNG, WEBP o GIF.";
+  if (archivo.size > MAX_BYTES) return "La imagen no puede pesar más de 5 MB.";
+  return null;
+}
+
+// Las imágenes de cada tienda van en su carpeta: "5/abc.webp", "5/marca/logo.png".
+async function subirImagen(
+  supabase: Awaited<ReturnType<typeof exigirAdmin>>,
+  tiendaId: number,
+  archivo: File,
+  carpeta = "",
+) {
+  const ext = archivo.type.split("/")[1].replace("jpeg", "jpg");
+  const path = `${tiendaId}/${carpeta}${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage.from(BUCKET).upload(path, archivo, { contentType: archivo.type });
+  if (error) throw new Error("No se pudo subir la imagen: " + error.message);
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+  return { imagen_path: path, imagen_url: data.publicUrl };
+}
+
+/** Lugar del siguiente producto destacado: al final del carrusel. */
+async function siguienteOrden(supabase: Awaited<ReturnType<typeof exigirAdmin>>, tiendaId: number): Promise<number> {
+  const { data } = await supabase
+    .from("productos")
+    .select("orden_destacado")
+    .eq("tienda_id", tiendaId)
+    .eq("destacado", true)
+    .order("orden_destacado", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return Math.min(32000, (data?.orden_destacado ?? 0) + 1);
+}
+
+export async function crearProducto(tiendaId: number, _prev: Resultado, formData: FormData): Promise<Resultado> {
+  try {
+    const supabase = await exigirAdmin(tiendaId);
+    const { nombre, descripcion, categoria_id, archivo, destacado } = leerProducto(formData);
+    if (!nombre) return { ok: false, mensaje: "El nombre es obligatorio." };
+    if (!categoria_id) return { ok: false, mensaje: "Elige una categoría." };
+    if (!archivo) return { ok: false, mensaje: "Sube una imagen del producto." };
+    const errImg = validarImagen(archivo);
+    if (errImg) return { ok: false, mensaje: errImg };
+
+    const imagen = await subirImagen(supabase, tiendaId, archivo);
+    const { error } = await supabase
+      .from("productos")
+      .insert({
+        tienda_id: tiendaId,
+        nombre,
+        descripcion,
+        categoria_id,
+        destacado,
+        orden_destacado: destacado ? await siguienteOrden(supabase, tiendaId) : 0,
+        ...imagen,
+      });
+    if (error) {
+      await supabase.storage.from(BUCKET).remove([imagen.imagen_path]);
+      return { ok: false, mensaje: error.code === "P0001" ? error.message : "No se pudo guardar: " + error.message };
+    }
+    revalidatePath("/", "layout");
+    return { ok: true, mensaje: `“${nombre}” se agregó al catálogo.` };
+  } catch (e) {
+    return { ok: false, mensaje: e instanceof Error ? e.message : "Error inesperado." };
+  }
+}
+
+export async function actualizarProducto(tiendaId: number, _prev: Resultado, formData: FormData): Promise<Resultado> {
+  let exito = false;
+  try {
+    const supabase = await exigirAdmin(tiendaId);
+    const id = Number(formData.get("id"));
+    const { nombre, descripcion, categoria_id, archivo, destacado } = leerProducto(formData);
+    if (!nombre) return { ok: false, mensaje: "El nombre es obligatorio." };
+    if (!categoria_id) return { ok: false, mensaje: "Elige una categoría." };
+    const errImg = validarImagen(archivo);
+    if (errImg) return { ok: false, mensaje: errImg };
+
+    const { data: actual } = await supabase
+      .from("productos")
+      .select("imagen_path, destacado")
+      .eq("id", id)
+      .eq("tienda_id", tiendaId)
+      .maybeSingle();
+    if (!actual) return { ok: false, mensaje: "Ese producto no existe en esta tienda." };
+    const cambios: Record<string, unknown> = { nombre, descripcion, categoria_id, destacado };
+    if (destacado && !actual.destacado) cambios.orden_destacado = await siguienteOrden(supabase, tiendaId);
+    if (archivo) Object.assign(cambios, await subirImagen(supabase, tiendaId, archivo));
+
+    const { error } = await supabase.from("productos").update(cambios).eq("id", id).eq("tienda_id", tiendaId);
+    if (error) return { ok: false, mensaje: error.code === "P0001" ? error.message : "No se pudo guardar: " + error.message };
+    if (archivo && actual.imagen_path) await supabase.storage.from(BUCKET).remove([actual.imagen_path]);
+    revalidatePath("/", "layout");
+    exito = true;
+  } catch (e) {
+    return { ok: false, mensaje: e instanceof Error ? e.message : "Error inesperado." };
+  }
+  if (exito) redirect(`${await obtenerBase()}/admin`);
+  return null;
+}
+
+export async function eliminarProducto(tiendaId: number, formData: FormData) {
+  const supabase = await exigirAdmin(tiendaId);
+  const id = Number(formData.get("id"));
+  const { data } = await supabase
+    .from("productos")
+    .select("imagen_path")
+    .eq("id", id)
+    .eq("tienda_id", tiendaId)
+    .maybeSingle();
+  if (!data) return;
+  await supabase.from("productos").delete().eq("id", id).eq("tienda_id", tiendaId);
+  if (data.imagen_path) await supabase.storage.from(BUCKET).remove([data.imagen_path]);
+  revalidatePath("/", "layout");
+}
+
+export async function crearCategoria(tiendaId: number, _prev: Resultado, formData: FormData): Promise<Resultado> {
+  try {
+    const supabase = await exigirAdmin(tiendaId);
+    const nombre = String(formData.get("nombre") ?? "").trim();
+    if (!nombre) return { ok: false, mensaje: "Escribe el nombre de la categoría." };
+    const { error } = await supabase.from("categorias").insert({ tienda_id: tiendaId, nombre });
+    if (error) return { ok: false, mensaje: error.code === "23505" ? "Esa categoría ya existe." : error.message };
+    revalidatePath("/", "layout");
+    return { ok: true, mensaje: `Categoría “${nombre}” creada.` };
+  } catch (e) {
+    return { ok: false, mensaje: e instanceof Error ? e.message : "Error inesperado." };
+  }
+}
+
+export async function eliminarCategoria(tiendaId: number, formData: FormData) {
+  const supabase = await exigirAdmin(tiendaId);
+  await supabase.from("categorias").delete().eq("id", Number(formData.get("id"))).eq("tienda_id", tiendaId);
+  revalidatePath("/", "layout");
+}
+
+export async function guardarConfiguracion(tiendaId: number, _prev: Resultado, formData: FormData): Promise<Resultado> {
+  try {
+    const supabase = await exigirAdmin(tiendaId);
+    const nombre_tienda = String(formData.get("nombre_tienda") ?? "").trim();
+    if (!nombre_tienda) return { ok: false, mensaje: "Escribe el nombre de la tienda." };
+    if (nombre_tienda.length > 60) return { ok: false, mensaje: "El nombre puede tener hasta 60 caracteres." };
+
+    const cel = normalizarCelular(String(formData.get("codigo_pais") ?? ""), String(formData.get("celular") ?? ""));
+    if (!cel.ok) return { ok: false, mensaje: cel.error };
+
+    const logo = formData.get("logo");
+    const archivo = logo instanceof File && logo.size > 0 ? logo : null;
+    const errImg = validarImagen(archivo);
+    if (errImg) return { ok: false, mensaje: errImg.replace("La imagen", "El logo") };
+    const quitarLogo = formData.get("quitar_logo") === "on";
+
+    const { data: actual } = await supabase.from("tiendas").select("logo_path").eq("id", tiendaId).maybeSingle();
+    const cambios: Record<string, unknown> = {
+      nombre_tienda,
+      codigo_pais: cel.codigo,
+      celular: cel.nacional,
+      actualizado_en: new Date().toISOString(),
+    };
+    if (archivo) {
+      const subida = await subirImagen(supabase, tiendaId, archivo, "marca/");
+      cambios.logo_url = subida.imagen_url;
+      cambios.logo_path = subida.imagen_path;
+    } else if (quitarLogo) {
+      cambios.logo_url = null;
+      cambios.logo_path = null;
+    }
+
+    const { error } = await supabase.from("tiendas").update(cambios).eq("id", tiendaId);
+    if (error) return { ok: false, mensaje: "No se pudo guardar: " + error.message };
+    if ((archivo || quitarLogo) && actual?.logo_path) await supabase.storage.from(BUCKET).remove([actual.logo_path]);
+    revalidatePath("/", "layout");
+    return { ok: true, mensaje: "Datos de la tienda guardados." };
+  } catch (e) {
+    return { ok: false, mensaje: e instanceof Error ? e.message : "Error inesperado." };
+  }
+}
+
+// Lo más vendido (carrusel) ---------------------------------------------------
+
+/** Marca o quita un producto del carrusel "Lo más vendido". */
+export async function cambiarDestacado(tiendaId: number, formData: FormData): Promise<Resultado> {
+  try {
+    const supabase = await exigirAdmin(tiendaId);
+    const id = Number(formData.get("id"));
+    const destacado = formData.get("destacado") === "1";
+    const cambios: Record<string, unknown> = { destacado };
+    if (destacado) cambios.orden_destacado = await siguienteOrden(supabase, tiendaId);
+    const { error } = await supabase.from("productos").update(cambios).eq("id", id).eq("tienda_id", tiendaId);
+    if (error) {
+      return {
+        ok: false,
+        mensaje: error.code === "P0001" ? error.message : `No se pudo cambiar (máximo ${MAX_DESTACADOS} destacados).`,
+      };
+    }
+    revalidatePath("/", "layout");
+    return { ok: true, mensaje: destacado ? "Agregado a lo más vendido." : "Quitado de lo más vendido." };
+  } catch (e) {
+    return { ok: false, mensaje: e instanceof Error ? e.message : "Error inesperado." };
+  }
+}
+
+/** Sube o baja un producto en el carrusel. */
+export async function moverDestacado(tiendaId: number, formData: FormData) {
+  const supabase = await exigirAdmin(tiendaId);
+  const id = Number(formData.get("id"));
+  const dir = formData.get("dir") === "arriba" ? -1 : 1;
+  const { data } = await supabase
+    .from("productos")
+    .select("id, orden_destacado, creado_en")
+    .eq("tienda_id", tiendaId)
+    .eq("destacado", true)
+    .order("orden_destacado")
+    .order("creado_en", { ascending: false });
+  const lista = data ?? [];
+  const i = lista.findIndex((p) => p.id === id);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= lista.length) return;
+  [lista[i], lista[j]] = [lista[j], lista[i]];
+  // Se renumera toda la lista para que el orden quede limpio (1, 2, 3…)
+  await Promise.all(
+    lista.map((p, n) =>
+      p.orden_destacado === n + 1
+        ? null
+        : supabase.from("productos").update({ orden_destacado: n + 1 }).eq("id", p.id).eq("tienda_id", tiendaId),
+    ),
+  );
+  revalidatePath("/", "layout");
+}
+
+// Apariencia: colores, banner y textos de la portada ---------------------------
+
+export async function guardarApariencia(tiendaId: number, _prev: Resultado, formData: FormData): Promise<Resultado> {
+  try {
+    const supabase = await exigirAdmin(tiendaId);
+    const color_principal = normalizarColor(String(formData.get("color_principal") ?? ""));
+    const color_encabezado = normalizarColor(String(formData.get("color_encabezado") ?? ""));
+    if (!color_principal || !color_encabezado) return { ok: false, mensaje: "Elige colores válidos (por ejemplo #ea580c)." };
+    const texto = (k: string, max: number) => String(formData.get(k) ?? "").trim().slice(0, max);
+
+    const banner = formData.get("banner");
+    const archivo = banner instanceof File && banner.size > 0 ? banner : null;
+    const errImg = validarImagen(archivo);
+    if (errImg) return { ok: false, mensaje: errImg.replace("La imagen", "El banner") };
+    const quitarBanner = formData.get("quitar_banner") === "on";
+
+    const { data: actual } = await supabase.from("tiendas").select("banner_path").eq("id", tiendaId).maybeSingle();
+    const cambios: Record<string, unknown> = {
+      color_principal,
+      color_encabezado,
+      titulo_portada: texto("titulo_portada", 80),
+      texto_portada: texto("texto_portada", 200),
+      texto_buscador: texto("texto_buscador", 60),
+      actualizado_en: new Date().toISOString(),
+    };
+    if (archivo) {
+      const subida = await subirImagen(supabase, tiendaId, archivo, "marca/");
+      cambios.banner_url = subida.imagen_url;
+      cambios.banner_path = subida.imagen_path;
+    } else if (quitarBanner) {
+      cambios.banner_url = null;
+      cambios.banner_path = null;
+    }
+
+    const { error } = await supabase.from("tiendas").update(cambios).eq("id", tiendaId);
+    if (error) return { ok: false, mensaje: "No se pudo guardar: " + error.message };
+    if ((archivo || quitarBanner) && actual?.banner_path) await supabase.storage.from(BUCKET).remove([actual.banner_path]);
+    revalidatePath("/", "layout");
+    return { ok: true, mensaje: "Apariencia guardada. Abre tu catálogo para verla." };
+  } catch (e) {
+    return { ok: false, mensaje: e instanceof Error ? e.message : "Error inesperado." };
+  }
+}

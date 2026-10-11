@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Colores por defecto (naranja). Cada tienda los cambia con lib/tema.ts. */
+:root {
+  --marca-50: 255 247 237;
+  --marca-100: 255 237 213;
+  --marca-400: 251 146 60;
+  --marca-500: 249 115 22;
+  --marca-600: 234 88 12;
+  --marca-700: 194 65 12;
+  --encabezado: 17 24 39;
+  --encabezado-2: 31 41 55;
+  --encabezado-texto: 255 255 255;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-gray-50 text-gray-900 antialiased;
+}
+
+@layer components {
+  .campo {
+    @apply w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-marca-500 focus:ring-2 focus:ring-marca-100;
+  }
+
+  .etiqueta {
+    @apply mb-1 block text-sm font-medium text-gray-700;
+  }
+
+  .boton {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .boton-primario {
+    @apply boton bg-marca-600 text-white hover:bg-marca-700;
+  }
+
+  .boton-secundario {
+    @apply boton border border-gray-300 bg-white text-gray-800 hover:bg-gray-100;
+  }
+
+  .boton-whatsapp {
+    @apply boton bg-[#25D366] text-white hover:bg-[#1ebe5a];
+  }
+
+  .boton-peligro {
+    @apply boton border border-red-200 bg-white text-red-600 hover:bg-red-50;
+  }
+
+  .tarjeta {
+    @apply rounded-2xl border bg-white p-5 shadow-sm;
+  }
+}
