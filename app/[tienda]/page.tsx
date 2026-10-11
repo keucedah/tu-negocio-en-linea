@@ -56,7 +56,7 @@ export default async function Inicio({
         </p>
       )}
       {top.length > 0 && <Destacados productos={top} />}
-      <Suspense>
+      <Suspense fallback={<div className="min-h-screen" />}>
         <Catalogo
           categorias={catalogo.categorias}
           conteo={catalogo.conteo}
