@@ -8,15 +8,29 @@ Plataforma SaaS de catálogos en línea: tu página, tu panel de clientes y la t
 
 Los pasos completos están en la guía `guia-plataforma.pdf`.
 
-## Novedades de la 2.2 (catálogo con movimiento)
+## Novedades de la 2.2
 
-Solo cambia el sitio web: no hay SQL nuevo ni cambios en la App.
+**Antes de subir esta versión, ejecuta en Supabase > SQL Editor `supabase/actualizacion-2.2.sql`**
+(y `optimizacion-2.1.sql` si todavía no lo hiciste). Agrega las columnas de precio y tallas; se puede
+ejecutar más de una vez. Para instalar desde cero basta con `vitrina.sql`, que ya lo incluye.
 
-- Las tarjetas de productos aparecen con un efecto suave al bajar la página.
-- Al pasar el mouse (o tocar en el teléfono) la tarjeta se levanta y la foto hace un zoom ligero.
-- Al agregar al carrito, la foto vuela hasta "Mi pedido" y el número rebota.
-- Los productos subidos en los últimos 7 días llevan la etiqueta **Nuevo** (se cambia en `DIAS_NUEVO`, `app/[tienda]/page.tsx`).
-- Si el cliente activó "menos animaciones" en su teléfono o computadora, todo se ve quieto.
+Precio y tallas (panel del dueño y tienda):
+- Casilla **Mostrar precio** al agregar o editar un producto. Si no se marca, la tienda no muestra precio.
+- Casilla **Tiene tallas**: salen las tallas comunes (Ropa, Calzado, Pantalón, Niños, Bebé) para marcar y un
+  campo para escribir las que falten ("46, Única…"). Hasta 40 tallas por producto.
+- En la tienda, el precio y las tallas salen en la tarjeta. Con tallas, el botón dice **Elegir talla** y el
+  cliente toca la suya; en la página del producto la talla es obligatoria. Cada talla va en su propia línea
+  del carrito, y el mensaje de WhatsApp lleva talla, precio y total.
+- La App 4.2 muestra lo mismo (ver su LEEME).
+
+Movimiento:
+- Página principal: el teléfono de la portada pasa solo por las pantallas de la tienda y muestra el aviso
+  "¡Nuevo pedido!"; las secciones aparecen al bajar; las tarjetas de planes se levantan y el plan del medio
+  sale como **Recomendado** (con tres planes o más).
+- Tiendas: botón flotante de WhatsApp con pulso; tarjetas que aparecen al bajar, se levantan y hacen zoom;
+  la foto vuela al carrito; etiqueta **Nuevo** en lo subido en los últimos 7 días (`DIAS_NUEVO`,
+  `app/[tienda]/page.tsx`).
+- Si el visitante activó "menos animaciones" en su teléfono o computadora, todo se ve quieto.
 
 ## Actualizar de la 2.0 a la 2.1 (optimización)
 
