@@ -108,7 +108,7 @@ export default function FormularioApariencia({ tienda, sugeridos, accion }: Prop
             </label>
           )}
           <p className="text-xs text-gray-500">
-            {optimizando ? "Optimizando imagen…" : "Recomendado: foto horizontal de 1600 × 600 píxeles. Se optimiza sola antes de subirse."}
+            {optimizando ? "Optimizando imagen…" : "Medida recomendada: 1600 × 600 píxeles (horizontal). Se ve completa en celular y computadora, con cualquier zoom; si tiene otra medida no se corta. El título y el texto van debajo del banner. Se optimiza sola antes de subirse."}
           </p>
         </div>
 
@@ -151,14 +151,14 @@ export default function FormularioApariencia({ tienda, sugeridos, accion }: Prop
             </span>
             <span className="rounded bg-encabezado-texto/10 px-2 py-0.5 text-xs">Mi pedido</span>
           </div>
+          {fondo && (
+            <div className="relative aspect-[8/3] overflow-hidden bg-encabezado">
+              <img src={fondo} alt="" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-xl" />
+              <img src={fondo} alt="" className="relative h-full w-full object-contain" />
+            </div>
+          )}
           <div className="relative bg-encabezado text-encabezado-texto">
-            {fondo && (
-              <>
-                <img src={fondo} alt="" className="absolute inset-0 h-full w-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-black/10" />
-              </>
-            )}
-            <div className={`relative px-3 ${fondo ? "py-8 text-white" : "py-5"}`}>
+            <div className={`relative px-3 ${fondo ? "py-3" : "py-5"}`}>
               <p className="text-base font-bold leading-tight">{titulo || sugeridos.titulo}</p>
               <p className="mt-1 text-xs opacity-90">{texto || sugeridos.texto}</p>
             </div>

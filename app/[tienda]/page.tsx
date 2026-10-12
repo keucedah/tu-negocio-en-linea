@@ -41,18 +41,21 @@ export default async function Inicio({
 
   return (
     <>
-      {/* Portada: banner del dueño (o el color de su encabezado) con su título y texto */}
+      {/* Portada: el banner del dueño se ve siempre completo, en su proporción (8:3), con cualquier
+          pantalla o zoom. El título y el texto van debajo para no tapar lo que trae la imagen. */}
+      {tienda.bannerUrl && (
+        <section className="relative overflow-hidden bg-encabezado">
+          <img src={tienda.bannerUrl} alt="" aria-hidden className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl" />
+          <div className="relative mx-auto aspect-[8/3] max-w-6xl">
+            <img src={tienda.bannerUrl} alt={`Banner de ${tienda.nombre}`} className="h-full w-full object-contain" fetchPriority="high" />
+          </div>
+        </section>
+      )}
       <section className="relative overflow-hidden bg-encabezado text-encabezado-texto">
-        {tienda.bannerUrl && (
-          <>
-            <img src={tienda.bannerUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-black/10" />
-          </>
-        )}
-        {!tienda.bannerUrl && <div className="absolute inset-0 bg-gradient-to-r from-encabezado to-encabezado-2" />}
-        <div className={`relative mx-auto max-w-6xl px-4 ${tienda.bannerUrl ? "py-16 text-white sm:py-24" : "py-10"}`}>
+        <div className="absolute inset-0 bg-gradient-to-r from-encabezado to-encabezado-2" />
+        <div className={`relative mx-auto max-w-6xl px-4 ${tienda.bannerUrl ? "py-6" : "py-10"}`}>
           <h1 className="max-w-2xl text-2xl font-bold sm:text-4xl">{tienda.tituloPortada}</h1>
-          <p className={`mt-2 max-w-xl ${tienda.bannerUrl ? "text-white/90" : "opacity-80"}`}>{tienda.textoPortada}</p>
+          <p className="mt-2 max-w-xl opacity-80">{tienda.textoPortada}</p>
         </div>
       </section>
       {!supabaseConfigurado && (
