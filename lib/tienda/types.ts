@@ -59,10 +59,15 @@ export type FilaTienda = {
   /** Hasta 3 banners en orden (2.4). Pueden faltar si no se ejecutó el SQL de la 2.4. */
   banners_url?: string[];
   banners_path?: string[];
+  /** Imagen para celular (2:1) de cada banner, en el mismo orden; '' = sin versión para celular (2.4.1). */
+  banners_movil_url?: string[];
+  banners_movil_path?: string[];
   /** Fondo del título de la portada (2.4). Vacío = el de la barra. */
   color_portada?: string;
   tipo: Pick<TipoNegocio, "nombre" | "titulo_portada" | "texto_portada" | "texto_buscador"> | null;
 };
+
+export type BannerTienda = { pc: string; movil: string };
 
 /** Datos de la tienda ya listos para mostrar. */
 export type Tienda = {
@@ -79,7 +84,7 @@ export type Tienda = {
   textoPortada: string;
   textoBuscador: string;
   bannerUrl: string | null;
-  /** Banners del carrusel de la portada (hasta 3). */
-  banners: string[];
+  /** Banners del carrusel de la portada (hasta 3): imagen de computadora (4:1) y, si tiene, la de celular (2:1). */
+  banners: BannerTienda[];
   colorPortada: string;
 };
