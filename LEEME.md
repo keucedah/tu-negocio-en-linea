@@ -8,6 +8,36 @@ Plataforma SaaS de catálogos en línea: tu página, tu panel de clientes y la t
 
 Los pasos completos están en la guía `guia-plataforma.pdf`.
 
+## Novedades de la 2.3
+
+**Antes de subir esta versión, ejecuta en Supabase > SQL Editor `supabase/actualizacion-2.3.sql`.**
+Se puede ejecutar más de una vez. Para instalar desde cero basta con `vitrina.sql`, que ya lo incluye.
+La App Android no cambia.
+
+Recibos en PDF (panel de administración):
+- Cada cliente tiene su serie de 4 letras, sacada de la primera letra de cada palabra del negocio
+  (Ferretería El Sol → FESO), y su propia numeración: FESO-0001, FESO-0002… Si dos clientes dan las mismas
+  letras, la del segundo termina en número (FES2). La serie no cambia aunque se cambie el nombre, y un número
+  usado no se repite aunque se borre el pago. Los pagos que ya existían se numeran por fecha.
+- Botones **Enviar recibo** y **PDF** en cada pago (ficha del cliente y pestaña Pagos). En el celular se
+  comparte directo a WhatsApp; en la computadora se descarga y se abre el chat del cliente para arrastrarlo.
+- El recibo lleva tus datos, los del cliente, concepto, plan, forma de pago, nota, total, el monto en letras
+  y "Servicio pagado hasta". El plan y la fecha se guardan al registrar el pago, así el recibo no cambia después.
+
+Anuncios (pestaña **Anuncios**):
+- Sorteos, regalías y promociones con hasta 4 imágenes o un video por enlace, texto y botón
+  **Quiero participar** (abre tu WhatsApp con el nombre del anuncio y de la tienda, o el enlace que pongas).
+- Salen en un carrusel debajo de la portada de las tiendas (todas o las que elijas) y, si se marca, en tu
+  página principal. Tienen botón **Compartir**, fechas de inicio y fin, y se pueden pausar.
+- Medida recomendada de las imágenes: 1600 × 900 px (16:9). Se ajustan a cualquier pantalla y siempre se
+  guardan en WebP (máximo 1600 px). No salen en la App.
+
+## Novedades de la 2.2.1
+
+Arreglo pequeño que salió en la prueba de carga: al abrir una tienda, el pie de página aparecía arriba y
+saltaba hacia abajo cuando llegaba la lista de productos. Ahora la lista reserva su espacio desde el inicio
+(`app/[tienda]/page.tsx`). No cambia la base de datos: solo sube los archivos.
+
 ## Novedades de la 2.2
 
 **Antes de subir esta versión, ejecuta en Supabase > SQL Editor `supabase/actualizacion-2.2.sql`**
