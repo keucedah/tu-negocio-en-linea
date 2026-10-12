@@ -5,7 +5,7 @@ import { unstable_cache } from "next/cache";
 import { crearClienteServidor } from "../supabase/server";
 import { crearClientePublico } from "../supabase/publico";
 import { SEGUNDOS_CACHE, TAG_PLATAFORMA } from "../cache";
-import type { Ajustes, Cliente, Pago, Plan, Solicitud, TipoNegocio } from "./types";
+import type { Ajustes, Anuncio, Cliente, Pago, Plan, Solicitud, TipoNegocio } from "./types";
 
 const COLUMNAS_AJUSTES =
   "nombre_negocio, eslogan, codigo_pais, celular, correo, direccion, precio_instalacion, precio_dominio, dias_aviso, plantilla_cobro, plantilla_vencido, plantilla_recibo";
@@ -69,7 +69,7 @@ const aCliente = (c: Cliente): Cliente => ({
   ...c,
   cuota_personalizada: c.cuota_personalizada == null ? null : Number(c.cuota_personalizada),
 });
-const aPago = (p: Pago): Pago => ({ ...p, monto: Number(p.monto) });
+const aPago = (p: Pago): Pago => ({ ...p, monto: Number(p.monto), numero_recibo: Number(p.numero_recibo) });
 
 export async function obtenerClientes(): Promise<Cliente[]> {
   if (!supabaseConfigurado) return clientesDemo;
@@ -94,7 +94,7 @@ export async function obtenerPagos(clienteId?: number): Promise<Pago[]> {
   const supabase = await crearClienteServidor();
   let q = supabase
     .from("pagos")
-    .select("id, cliente_id, fecha, monto, concepto, meses, metodo, nota")
+    .select("id, cliente_id, fecha, monto, concepto, meses, metodo, nota, serie_recibo, numero_recibo, plan_nombre, pagado_hasta")
     .order("fecha", { ascending: false })
     .order("id", { ascending: false });
   if (clienteId) q = q.eq("cliente_id", clienteId);
@@ -139,4 +139,25 @@ export const obtenerTipos = cache(async (): Promise<TipoNegocio[]> => {
 /** Nombre del tipo de negocio de un cliente ("Otro" muestra lo que se escribió). */
 export function nombreTipo(c: Pick<Cliente, "tipo_negocio_id" | "tipo_negocio_otro">, tipos: TipoNegocio[]): string {
   return c.tipo_negocio_otro || tipos.find((t) => t.id === c.tipo_negocio_id)?.nombre || "";
+}
+
+/** Todos los anuncios (vigentes, programados, terminados y pausados) para el panel. */
+export async function obtenerAnuncios(): Promise<Anuncio[]> {
+  if (!supabaseConfigurado) return [];
+  const supabase = await crearClienteServidor();
+  const { data, error } = await supabase
+    .from("anuncios")
+    .select("id, titulo, texto, imagenes, rutas_imagenes, video_url, boton_texto, boton_url, tiendas, en_inicio, activo, inicia, termina, orden, creado_en")
+    .order("orden")
+    .order("id", { ascending: false });
+  if (error) return []; // Falta ejecutar el SQL de la 2.3
+  return data.map((a) => ({ ...a, tiendas: (a.tiendas ?? []).map(Number) }));
+}
+
+/** Tiendas para elegir dónde sale un anuncio. */
+export async function obtenerTiendasLista(): Promise<{ id: number; nombre: string; activa: boolean }[]> {
+  if (!supabaseConfigurado) return [];
+  const supabase = await crearClienteServidor();
+  const { data } = await supabase.from("tiendas").select("id, nombre_tienda, activa").order("nombre_tienda");
+  return (data ?? []).map((t) => ({ id: Number(t.id), nombre: t.nombre_tienda, activa: t.activa }));
 }

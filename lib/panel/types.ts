@@ -79,6 +79,13 @@ export type Pago = {
   meses: number;
   metodo: string;
   nota: string;
+  /** Serie del cliente (4 letras) y número de su recibo: FESO-0001. Nunca se repite. */
+  serie_recibo: string;
+  numero_recibo: number;
+  /** Plan del cliente cuando pagó, para que el recibo no cambie después. */
+  plan_nombre: string;
+  /** Hasta qué fecha queda pagado (solo mensualidades). */
+  pagado_hasta: string | null;
 };
 
 export type Solicitud = {
@@ -104,4 +111,27 @@ export type TipoNegocio = {
   categorias: string;
   orden: number;
   activo: boolean;
+};
+
+/** Anuncio (sorteo, regalía, promoción) que sale en un carrusel en las tiendas de los clientes. */
+export type Anuncio = {
+  id: number;
+  titulo: string;
+  texto: string;
+  /** Hasta 4 imágenes WebP (direcciones públicas). */
+  imagenes: string[];
+  rutas_imagenes: string[];
+  /** O un video por enlace (YouTube, Facebook, TikTok…). */
+  video_url: string;
+  boton_texto: string;
+  boton_url: string;
+  /** Tiendas donde sale. Vacío = en todas. */
+  tiendas: number[];
+  /** También sale en la página principal de la plataforma. */
+  en_inicio: boolean;
+  activo: boolean;
+  inicia: string | null;
+  termina: string | null;
+  orden: number;
+  creado_en: string;
 };

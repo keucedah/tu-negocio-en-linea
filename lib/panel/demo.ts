@@ -67,11 +67,11 @@ export const clientesDemo: Cliente[] = [
 ];
 
 export const pagosDemo: Pago[] = [
-  { id: 1, cliente_id: 1, fecha: sumarMeses(h, -4), monto: 2500, concepto: "instalacion", meses: 0, metodo: "Transferencia", nota: "" },
-  { id: 2, cliente_id: 1, fecha: dias(-33), monto: 635, concepto: "mensualidad", meses: 1, metodo: "Transferencia", nota: "Plan Pro + dominio" },
-  { id: 3, cliente_id: 2, fecha: dias(-28), monto: 250, concepto: "mensualidad", meses: 1, metodo: "Efectivo", nota: "" },
-  { id: 4, cliente_id: 3, fecha: dias(-12), monto: 935, concepto: "mensualidad", meses: 1, metodo: "Tigo Money", nota: "" },
-  { id: 5, cliente_id: 3, fecha: dias(-12), monto: 2500, concepto: "instalacion", meses: 0, metodo: "Transferencia", nota: "" },
+  { id: 1, cliente_id: 1, fecha: sumarMeses(h, -4), monto: 2500, concepto: "instalacion", meses: 0, metodo: "Transferencia", nota: "", serie_recibo: "FEEC", numero_recibo: 1, plan_nombre: "Pro", pagado_hasta: null },
+  { id: 2, cliente_id: 1, fecha: dias(-33), monto: 635, concepto: "mensualidad", meses: 1, metodo: "Transferencia", nota: "Plan Pro + dominio", serie_recibo: "FEEC", numero_recibo: 2, plan_nombre: "Pro", pagado_hasta: dias(-3) },
+  { id: 3, cliente_id: 2, fecha: dias(-28), monto: 250, concepto: "mensualidad", meses: 1, metodo: "Efectivo", nota: "", serie_recibo: "BOLA", numero_recibo: 1, plan_nombre: "Básico", pagado_hasta: dias(2) },
+  { id: 4, cliente_id: 3, fecha: dias(-12), monto: 935, concepto: "mensualidad", meses: 1, metodo: "Tigo Money", nota: "", serie_recibo: "FCEN", numero_recibo: 2, plan_nombre: "Pro Plus", pagado_hasta: dias(18) },
+  { id: 5, cliente_id: 3, fecha: dias(-12), monto: 2500, concepto: "instalacion", meses: 0, metodo: "Transferencia", nota: "", serie_recibo: "FCEN", numero_recibo: 1, plan_nombre: "Pro Plus", pagado_hasta: null },
 ];
 
 export const solicitudesDemo: Solicitud[] = [
