@@ -3,6 +3,8 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Catalogo from "@/components/tienda/Catalogo";
 import Anuncios from "@/components/tienda/Anuncios";
+import Banners from "@/components/tienda/Banners";
+import { estiloPortada } from "@/lib/tema";
 import Destacados from "@/components/tienda/Destacados";
 import NoDisponible from "@/components/tienda/NoDisponible";
 import { leerFiltros, obtenerPaginaCatalogo, obtenerTiendaPublica as obtenerTienda } from "@/lib/tienda/datos";
@@ -41,19 +43,12 @@ export default async function Inicio({
 
   return (
     <>
-      {/* Portada: el banner del dueño se ve siempre completo, en su proporción (8:3), con cualquier
-          pantalla o zoom. El título y el texto van debajo para no tapar lo que trae la imagen. */}
-      {tienda.bannerUrl && (
-        <section className="relative overflow-hidden bg-encabezado">
-          <img src={tienda.bannerUrl} alt="" aria-hidden className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl" />
-          <div className="relative mx-auto aspect-[8/3] max-w-6xl">
-            <img src={tienda.bannerUrl} alt={`Banner de ${tienda.nombre}`} className="h-full w-full object-contain" fetchPriority="high" />
-          </div>
-        </section>
-      )}
-      <section className="relative overflow-hidden bg-encabezado text-encabezado-texto">
-        <div className="absolute inset-0 bg-gradient-to-r from-encabezado to-encabezado-2" />
-        <div className={`relative mx-auto max-w-6xl px-4 ${tienda.bannerUrl ? "py-6" : "py-10"}`}>
+      {/* Portada: hasta 3 banners en carrusel (4:1, siempre completos con cualquier pantalla o zoom).
+          El título y el texto van debajo, sobre el color que elija el dueño, para no tapar la imagen. */}
+      {tienda.banners.length > 0 && <Banners banners={tienda.banners} nombre={tienda.nombre} />}
+      <section className="relative overflow-hidden bg-encabezado text-encabezado-texto" style={estiloPortada(tienda.colorPortada)}>
+        {!tienda.colorPortada && <div className="absolute inset-0 bg-gradient-to-r from-encabezado to-encabezado-2" />}
+        <div className={`relative mx-auto max-w-6xl px-4 ${tienda.banners.length ? "py-6" : "py-10"}`}>
           <h1 className="max-w-2xl text-2xl font-bold sm:text-4xl">{tienda.tituloPortada}</h1>
           <p className="mt-2 max-w-xl opacity-80">{tienda.textoPortada}</p>
         </div>

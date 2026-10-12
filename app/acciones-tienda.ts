@@ -323,7 +323,9 @@ export async function moverDestacado(tiendaId: number, formData: FormData) {
   refrescarCache();
 }
 
-// Apariencia: colores, banner y textos de la portada ---------------------------
+// Apariencia: colores, banners y textos de la portada --------------------------
+
+const MAX_BANNERS = 3;
 
 export async function guardarApariencia(tiendaId: number, _prev: Resultado, formData: FormData): Promise<Resultado> {
   try {
@@ -333,13 +335,42 @@ export async function guardarApariencia(tiendaId: number, _prev: Resultado, form
     if (!color_principal || !color_encabezado) return { ok: false, mensaje: "Elige colores válidos (por ejemplo #ea580c)." };
     const texto = (k: string, max: number) => String(formData.get(k) ?? "").trim().slice(0, max);
 
-    const banner = formData.get("banner");
-    const archivo = banner instanceof File && banner.size > 0 ? banner : null;
-    const errImg = validarImagen(archivo);
-    if (errImg) return { ok: false, mensaje: errImg.replace("La imagen", "El banner") };
-    const quitarBanner = formData.get("quitar_banner") === "on";
+    // Banners (hasta 3): los que se quedan, en su orden, y los nuevos al final
+    const nuevos = formData.getAll("banners_nuevos").filter((a): a is File => a instanceof File && a.size > 0);
+    for (const a of nuevos) {
+      const errImg = validarImagen(a);
+      if (errImg) return { ok: false, mensaje: errImg.replace("La imagen", "El banner") };
+    }
+    const conservar = formData.getAll("banners_conservar").map(String);
+    if (conservar.length + nuevos.length > MAX_BANNERS) return { ok: false, mensaje: `Máximo ${MAX_BANNERS} banners.` };
 
-    const { data: actual } = await supabase.from("tiendas").select("banner_path").eq("id", tiendaId).maybeSingle();
+    const leido = await supabase.from("tiendas").select("banner_url, banner_path, banners_url, banners_path").eq("id", tiendaId).maybeSingle();
+    const con24 = !leido.error; // false si todavía no se ejecutó el SQL de la 2.4
+    type Banners = { banner_url: string | null; banner_path: string | null; banners_url?: string[]; banners_path?: string[] };
+    const actual = (con24
+      ? leido.data
+      : (await supabase.from("tiendas").select("banner_url, banner_path").eq("id", tiendaId).maybeSingle()).data) as Banners | null;
+    const urlsAntes: string[] = actual?.banners_url?.length ? actual.banners_url : actual?.banner_url ? [actual.banner_url] : [];
+    const rutasAntes: string[] = actual?.banners_path?.length ? actual.banners_path : actual?.banner_url ? [actual.banner_path ?? ""] : [];
+    if (!con24 && conservar.length + nuevos.length > 1) {
+      return { ok: false, mensaje: "Para usar varios banners falta ejecutar en Supabase el archivo actualizacion-2.4.sql." };
+    }
+
+    const urls: string[] = [];
+    const rutas: string[] = [];
+    for (const u of conservar) {
+      const i = urlsAntes.indexOf(u);
+      if (i >= 0 && !urls.includes(u)) {
+        urls.push(u);
+        rutas.push(rutasAntes[i] ?? "");
+      }
+    }
+    for (const a of nuevos) {
+      const subida = await subirImagen(supabase, tiendaId, a, "marca/");
+      urls.push(subida.imagen_url);
+      rutas.push(subida.imagen_path);
+    }
+
     const cambios: Record<string, unknown> = {
       color_principal,
       color_encabezado,
@@ -348,18 +379,24 @@ export async function guardarApariencia(tiendaId: number, _prev: Resultado, form
       texto_buscador: texto("texto_buscador", 60),
       actualizado_en: new Date().toISOString(),
     };
-    if (archivo) {
-      const subida = await subirImagen(supabase, tiendaId, archivo, "marca/");
-      cambios.banner_url = subida.imagen_url;
-      cambios.banner_path = subida.imagen_path;
-    } else if (quitarBanner) {
-      cambios.banner_url = null;
-      cambios.banner_path = null;
+    // El primero también va en banner_url: es el que usa la App
+    cambios.banner_url = urls[0] ?? null;
+    cambios.banner_path = rutas[0] || null;
+    if (con24) {
+      cambios.banners_url = urls;
+      cambios.banners_path = rutas;
+      cambios.color_portada = normalizarColor(String(formData.get("color_portada") ?? ""));
     }
 
     const { error } = await supabase.from("tiendas").update(cambios).eq("id", tiendaId);
-    if (error) return { ok: false, mensaje: "No se pudo guardar: " + error.message };
-    if ((archivo || quitarBanner) && actual?.banner_path) await supabase.storage.from(BUCKET).remove([actual.banner_path]);
+    if (error) {
+      const subidas = rutas.filter((r) => !rutasAntes.includes(r) && r);
+      if (subidas.length) await supabase.storage.from(BUCKET).remove(subidas);
+      return { ok: false, mensaje: "No se pudo guardar: " + error.message };
+    }
+    // Borra del almacenamiento los banners que se quitaron
+    const quitados = rutasAntes.filter((r) => r && !rutas.includes(r));
+    if (quitados.length) await supabase.storage.from(BUCKET).remove(quitados);
     revalidatePath("/", "layout");
     refrescarCache();
     return { ok: true, mensaje: "Apariencia guardada. Abre tu catálogo para verla." };

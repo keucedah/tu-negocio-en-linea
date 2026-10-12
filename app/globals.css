@@ -151,3 +151,17 @@ body {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.08); }
 }
+
+/* ---- Banners de la portada (carrusel) ---- */
+@media (prefers-reduced-motion: no-preference) {
+  .banner-capa {
+    transition: opacity 0.8s ease, transform 0.6s ease;
+  }
+  /* Al pasar el puntero el banner se agranda un poco, como las fotos de los productos */
+  .banner-marco:hover .banner-zoom {
+    transform: scale(1.04);
+  }
+  .banner-marco:active .banner-zoom {
+    transform: scale(1.02);
+  }
+}

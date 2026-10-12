@@ -1,10 +1,10 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element */
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 import type { Resultado } from "@/app/acciones-tienda";
-import { optimizarCampo } from "@/lib/optimizarImagen";
-import { MUESTRAS, MUESTRAS_ENCABEZADO, normalizarColor, variablesTema } from "@/lib/tema";
+import { optimizarImagen } from "@/lib/optimizarImagen";
+import { MUESTRAS, MUESTRAS_ENCABEZADO, MUESTRAS_PORTADA, estiloPortada, normalizarColor, variablesTema } from "@/lib/tema";
 import type { FilaTienda } from "@/lib/tienda/types";
 
 type Props = {
@@ -61,56 +61,108 @@ function SelectorColor({
   );
 }
 
+const MAX_BANNERS = 3;
+
 export default function FormularioApariencia({ tienda, sugeridos, accion }: Props) {
   const [resultado, enviar, enviando] = useActionState(accion, null);
   const [principal, setPrincipal] = useState(tienda.color_principal);
   const [encabezado, setEncabezado] = useState(tienda.color_encabezado);
   const [titulo, setTitulo] = useState(tienda.titulo_portada);
   const [texto, setTexto] = useState(tienda.texto_portada);
-  const [banner, setBanner] = useState<string | null>(tienda.banner_url);
-  const [quitar, setQuitar] = useState(false);
+  // Banners: los que ya tiene (se pueden quitar) y los nuevos, ya optimizados
+  const [guardados, setGuardados] = useState<string[]>(
+    tienda.banners_url?.length ? tienda.banners_url : tienda.banner_url ? [tienda.banner_url] : [],
+  );
+  const [nuevos, setNuevos] = useState<{ archivo: File; vista: string }[]>([]);
   const [optimizando, setOptimizando] = useState(false);
+  const [portada, setPortada] = useState(tienda.color_portada ?? "");
+  const totalBanners = guardados.length + nuevos.length;
 
-  const colorValido = Boolean(normalizarColor(principal) && normalizarColor(encabezado));
+  const colorValido = Boolean(normalizarColor(principal) && normalizarColor(encabezado) && (!portada || normalizarColor(portada)));
   const vars = colorValido ? variablesTema(principal, encabezado) : {};
-  const fondo = banner && !quitar ? banner : null;
+  const fondo = guardados[0] ?? nuevos[0]?.vista ?? null;
+
+  async function agregar(e: React.ChangeEvent<HTMLInputElement>) {
+    const elegidos = Array.from(e.target.files ?? []).slice(0, MAX_BANNERS - totalBanners);
+    e.target.value = "";
+    if (!elegidos.length) return;
+    setOptimizando(true);
+    const listos: { archivo: File; vista: string }[] = [];
+    for (const f of elegidos) {
+      const o = await optimizarImagen(f, 1600);
+      listos.push({ archivo: o, vista: URL.createObjectURL(o) });
+    }
+    setNuevos((n) => [...n, ...listos]);
+    setOptimizando(false);
+  }
 
   return (
-    <form action={enviar} className="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <form
+      // Se envía a mano para agregar los banners nuevos y que el formulario no se borre si hay un error
+      onSubmit={(e) => {
+        e.preventDefault();
+        const datos = new FormData(e.currentTarget);
+        nuevos.forEach((n) => datos.append("banners_nuevos", n.archivo));
+        startTransition(() => enviar(datos));
+      }}
+      className="grid gap-6 lg:grid-cols-[1fr_360px]"
+    >
       <div className="space-y-5">
         <SelectorColor nombre="color_principal" titulo="Color principal (botones y enlaces)" valor={principal} muestras={MUESTRAS} cambiar={setPrincipal} />
         <SelectorColor nombre="color_encabezado" titulo="Color de la barra de arriba" valor={encabezado} muestras={MUESTRAS_ENCABEZADO} cambiar={setEncabezado} />
 
-        <div className="space-y-1">
-          <span className="text-sm font-medium">Banner de la portada</span>
-          <input
-            name="banner"
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            onChange={async (e) => {
-              const input = e.currentTarget;
-              if (!input.files?.[0]) {
-                setBanner(tienda.banner_url);
-                return;
-              }
-              setOptimizando(true);
-              const f = await optimizarCampo(input, 1600);
-              setOptimizando(false);
-              setBanner(f ? URL.createObjectURL(f) : tienda.banner_url);
-              if (f) setQuitar(false);
-            }}
-            className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-marca-50 file:px-3 file:py-2 file:font-semibold file:text-marca-700 hover:file:bg-marca-100"
-          />
-          {tienda.banner_url && (
-            <label className="flex items-center gap-2 text-xs text-gray-600">
-              <input type="checkbox" name="quitar_banner" checked={quitar} onChange={(e) => setQuitar(e.target.checked)} />
-              Quitar el banner actual (se usa el color de la barra)
-            </label>
-          )}
-          <p className="text-xs text-gray-500">
-            {optimizando ? "Optimizando imagen…" : "Medida recomendada: 1600 × 600 píxeles (horizontal). Se ve completa en celular y computadora, con cualquier zoom; si tiene otra medida no se corta. El título y el texto van debajo del banner. Se optimiza sola antes de subirse."}
+        <div className="space-y-2">
+          <span className="text-sm font-medium">Banners de la portada (hasta {MAX_BANNERS})</span>
+          <p className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-900">
+            <b>Medida recomendada: 1600 × 400 píxeles</b> (horizontal, 4 veces más ancho que alto). Se ven completos en celular,
+            computadora y con cualquier zoom; si la imagen tiene otra medida no se corta. Con varios banners, pasan solos cada 4 segundos.
           </p>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {guardados.map((src, i) => (
+              <div key={src} className="relative aspect-[4/1] overflow-hidden rounded-lg border bg-gray-100">
+                <input type="hidden" name="banners_conservar" value={src} />
+                <img src={src} alt={`Banner ${i + 1}`} className="h-full w-full object-contain" />
+                <button type="button" onClick={() => setGuardados((g) => g.filter((x) => x !== src))} aria-label="Quitar banner" className="absolute right-1 top-1 rounded-full bg-black/70 px-1.5 text-xs font-bold text-white">
+                  ×
+                </button>
+              </div>
+            ))}
+            {nuevos.map((n, i) => (
+              <div key={n.vista} className="relative aspect-[4/1] overflow-hidden rounded-lg border bg-gray-100">
+                <img src={n.vista} alt="" className="h-full w-full object-contain" />
+                <span className="absolute bottom-0.5 left-0.5 rounded bg-black/70 px-1 text-[10px] text-white">Nuevo</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setNuevos((l) => {
+                      URL.revokeObjectURL(l[i].vista);
+                      return l.filter((_, j) => j !== i);
+                    })
+                  }
+                  aria-label="Quitar banner"
+                  className="absolute right-1 top-1 rounded-full bg-black/70 px-1.5 text-xs font-bold text-white"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            {totalBanners < MAX_BANNERS && (
+              <label className="grid aspect-[4/1] cursor-pointer place-items-center rounded-lg border-2 border-dashed border-gray-300 text-xs text-gray-600 hover:border-marca-400">
+                {optimizando ? "Optimizando…" : `+ Agregar banner (${totalBanners}/${MAX_BANNERS})`}
+                <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple className="sr-only" onChange={agregar} disabled={optimizando} />
+              </label>
+            )}
+          </div>
+          {totalBanners === 0 && <p className="text-xs text-gray-500">Sin banner, la portada usa el color de la barra.</p>}
         </div>
+
+        <SelectorColor
+          nombre="color_portada"
+          titulo="Color de fondo del título y texto de la portada"
+          valor={portada || encabezado}
+          muestras={MUESTRAS_PORTADA}
+          cambiar={setPortada}
+        />
 
         <label className="block space-y-1">
           <span className="text-sm font-medium">Título de la portada</span>
@@ -152,12 +204,12 @@ export default function FormularioApariencia({ tienda, sugeridos, accion }: Prop
             <span className="rounded bg-encabezado-texto/10 px-2 py-0.5 text-xs">Mi pedido</span>
           </div>
           {fondo && (
-            <div className="relative aspect-[8/3] overflow-hidden bg-encabezado">
+            <div className="relative aspect-[4/1] overflow-hidden bg-encabezado">
               <img src={fondo} alt="" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-xl" />
               <img src={fondo} alt="" className="relative h-full w-full object-contain" />
             </div>
           )}
-          <div className="relative bg-encabezado text-encabezado-texto">
+          <div className="relative bg-encabezado text-encabezado-texto" style={estiloPortada(portada)}>
             <div className={`relative px-3 ${fondo ? "py-3" : "py-5"}`}>
               <p className="text-base font-bold leading-tight">{titulo || sugeridos.titulo}</p>
               <p className="mt-1 text-xs opacity-90">{texto || sugeridos.texto}</p>
