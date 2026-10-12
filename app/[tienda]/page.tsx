@@ -2,10 +2,12 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Catalogo from "@/components/tienda/Catalogo";
+import Anuncios from "@/components/tienda/Anuncios";
 import Destacados from "@/components/tienda/Destacados";
 import NoDisponible from "@/components/tienda/NoDisponible";
 import { leerFiltros, obtenerPaginaCatalogo, obtenerTiendaPublica as obtenerTienda } from "@/lib/tienda/datos";
 import { supabaseConfigurado } from "@/lib/config";
+import { obtenerAnunciosTienda } from "@/lib/anuncios";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +24,10 @@ export default async function Inicio({
   const tienda = await obtenerTienda((await params).tienda);
   if (!tienda) notFound();
   if (!tienda.activa) return <NoDisponible nombre={tienda.nombre} />;
-  const catalogo = await obtenerPaginaCatalogo(tienda.id, leerFiltros(await searchParams));
+  const [catalogo, anuncios] = await Promise.all([
+    obtenerPaginaCatalogo(tienda.id, leerFiltros(await searchParams)),
+    obtenerAnunciosTienda(tienda.id),
+  ]);
   // Lista y carrusel con la foto pequeña (si el producto la tiene); la grande queda para la ficha
   const ahora = Date.now();
   const esNuevo = (creado: string) => ahora - Date.parse(creado) < DIAS_NUEVO * 86_400_000;
@@ -55,7 +60,10 @@ export default async function Inicio({
           Modo demostración: se muestran productos de ejemplo hasta conectar la base de datos.
         </p>
       )}
+      {/* Anuncios de la plataforma (sorteos, promociones): no salen en la App */}
+      <Anuncios anuncios={anuncios.anuncios} whatsapp={anuncios.whatsapp} origen={`la tienda ${tienda.nombre}`} />
       {top.length > 0 && <Destacados productos={top} />}
+      {/* El alto mínimo evita que el pie de página salte cuando llega la lista (CLS) */}
       <Suspense fallback={<div className="min-h-screen" />}>
         <Catalogo
           categorias={catalogo.categorias}

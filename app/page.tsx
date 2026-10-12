@@ -3,6 +3,8 @@ import FormularioDemo from "@/components/panel/FormularioDemo";
 import Celular from "@/components/panel/Celular";
 import CelularAnimado from "@/components/panel/CelularAnimado";
 import Revelar from "@/components/Revelar";
+import Anuncios from "@/components/tienda/Anuncios";
+import { obtenerAnunciosInicio } from "@/lib/anuncios";
 import Marca, { Simbolo } from "@/components/Marca";
 import {
   IcoBolsa, IcoCaja, IcoCarrito, IcoCategorias, IcoCelular, IcoCheck, IcoCorreo, IcoEngrane, IcoEstrella, IcoGlobo, IcoImagen, IcoPaleta, IcoUbicacion, IcoWhatsApp,
@@ -43,7 +45,7 @@ const CAPTURAS = [
 ];
 
 export default async function Inicio() {
-  const [ajustes, planes, tipos] = await Promise.all([obtenerAjustes(), obtenerPlanes(), obtenerTipos()]);
+  const [ajustes, planes, tipos, anuncios] = await Promise.all([obtenerAjustes(), obtenerPlanes(), obtenerTipos(), obtenerAnunciosInicio()]);
   const rubros = tipos.filter((t) => t.activo && t.nombre.toLowerCase() !== "otro");
   const whatsapp = numeroWhatsApp(ajustes.codigo_pais, ajustes.celular);
   const celular = formatearCelular(ajustes.codigo_pais, ajustes.celular);
@@ -113,6 +115,13 @@ export default async function Inicio() {
           </div>
         </div>
       </section>
+
+      {/* Anuncios (sorteos, promociones) marcados para la página principal */}
+      {anuncios.anuncios.length > 0 && (
+        <div className="pb-6">
+          <Anuncios anuncios={anuncios.anuncios} whatsapp={anuncios.whatsapp} origen={`la página de ${ajustes.nombre_negocio}`} />
+        </div>
+      )}
 
       {/* Funciones */}
       <section id="funciones" className="scroll-mt-16 bg-gray-50 py-16">

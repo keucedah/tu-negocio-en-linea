@@ -229,9 +229,15 @@ export async function registrarPago(_prev: Resultado, f: FormData): Promise<Resu
     const meses = concepto === "mensualidad" ? Math.min(24, Math.max(1, Number(f.get("meses")) || 1)) : 0;
     const fechaPago = fecha(f, "fecha") ?? hoy();
 
-    const { data: cliente } = await supabase.from("clientes").select("proximo_pago, estado").eq("id", cliente_id).maybeSingle();
+    const { data: cliente } = await supabase
+      .from("clientes")
+      .select("proximo_pago, estado, planes(nombre)")
+      .eq("id", cliente_id)
+      .maybeSingle<{ proximo_pago: string | null; estado: string; planes: { nombre: string } | null }>();
     if (!cliente) return { ok: false, mensaje: "No se encontró el cliente." };
+    const pagadoHasta = meses > 0 ? sumarMeses(cliente.proximo_pago ?? fechaPago, meses) : null;
 
+    // El plan y el "pagado hasta" quedan guardados en el pago para el recibo
     const { error } = await supabase.from("pagos").insert({
       cliente_id,
       monto,
@@ -240,13 +246,15 @@ export async function registrarPago(_prev: Resultado, f: FormData): Promise<Resu
       fecha: fechaPago,
       metodo: texto(f, "metodo", 40),
       nota: texto(f, "nota", 300),
+      plan_nombre: (cliente.planes?.nombre ?? "").slice(0, 40),
+      pagado_hasta: pagadoHasta,
     });
     if (error) return { ok: false, mensaje: "No se pudo registrar: " + error.message };
 
     // Efecto del pago en la ficha del cliente
     const cambios: Record<string, unknown> = {};
-    if (meses > 0) {
-      cambios.proximo_pago = sumarMeses(cliente.proximo_pago ?? fechaPago, meses);
+    if (pagadoHasta) {
+      cambios.proximo_pago = pagadoHasta;
       if (cliente.estado === "suspendido") cambios.estado = "activo";
     }
     if (concepto === "instalacion") cambios.instalacion_pagada = true;

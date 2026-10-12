@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import BotonAccion from "@/components/panel/BotonAccion";
+import BotonRecibo from "@/components/panel/BotonRecibo";
 import Formulario from "@/components/panel/Formulario";
 import FormularioCliente from "@/components/panel/FormularioCliente";
 import MensajeLibre from "@/components/panel/MensajeLibre";
@@ -9,6 +10,7 @@ import { InsigniaCobro, InsigniaEstado } from "@/components/panel/Insignias";
 import { cambiarPlan, eliminarCliente, eliminarPago, registrarPago } from "@/app/admin/acciones";
 import { nombreTipo, obtenerAjustes, obtenerCliente, obtenerPagos, obtenerPlanes, obtenerTipos } from "@/lib/panel/datos";
 import { mensajeCobro } from "@/lib/panel/filas";
+import { datosRecibo, numeroRecibo } from "@/lib/panel/recibo";
 import {
   NOMBRE_CONCEPTO, cuotaMensual, datosMensaje, enlaceWhatsApp, estadoCobro, fechaCorta, hoy, lempiras, limiteProductos, llenarPlantilla, sumarMeses, textoCobro,
 } from "@/lib/negocio";
@@ -190,17 +192,20 @@ export default async function FichaCliente({ params, searchParams }: { params: P
             ) : (
               <ul className="divide-y text-sm">
                 {pagos.map((p) => (
-                  <li key={p.id} className="flex items-center justify-between gap-3 py-2">
+                  <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 py-2">
                     <div>
                       <p className="font-semibold">{lempiras(p.monto)} · {NOMBRE_CONCEPTO[p.concepto]}{p.meses > 1 ? ` (${p.meses} meses)` : ""}</p>
-                      <p className="text-xs text-gray-500">{[fechaCorta(p.fecha), p.metodo, p.nota].filter(Boolean).join(" · ")}</p>
+                      <p className="text-xs text-gray-500">{[`Recibo N.º ${numeroRecibo(p)}`, fechaCorta(p.fecha), p.metodo, p.nota].filter(Boolean).join(" · ")}</p>
                     </div>
+                    <div className="flex items-start gap-2">
+                    <BotonRecibo datos={datosRecibo(p, cliente, ajustes)} />
                     <BotonAccion
                       accion={eliminarPago.bind(null, p.id)}
                       confirmacion={`¿Eliminar este pago de ${lempiras(p.monto)}?${p.meses > 0 ? ` El próximo pago regresará ${p.meses} mes(es).` : ""}`}
                     >
                       Eliminar
                     </BotonAccion>
+                    </div>
                   </li>
                 ))}
               </ul>
