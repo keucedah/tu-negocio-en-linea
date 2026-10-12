@@ -63,37 +63,75 @@ function SelectorColor({
 
 const MAX_BANNERS = 3;
 
+/** Una imagen de banner: ya guardada (url) o nueva (archivo optimizado, aún sin subir). */
+type Img = { url?: string; archivo?: File; vista: string };
+type Slot = { id: string; pc: Img; movil: Img | null };
+
+const guardada = (url: string): Img => ({ url, vista: url });
+const soltar = (i: Img | null) => i?.archivo && URL.revokeObjectURL(i.vista);
+
 export default function FormularioApariencia({ tienda, sugeridos, accion }: Props) {
   const [resultado, enviar, enviando] = useActionState(accion, null);
   const [principal, setPrincipal] = useState(tienda.color_principal);
   const [encabezado, setEncabezado] = useState(tienda.color_encabezado);
   const [titulo, setTitulo] = useState(tienda.titulo_portada);
   const [texto, setTexto] = useState(tienda.texto_portada);
-  // Banners: los que ya tiene (se pueden quitar) y los nuevos, ya optimizados
-  const [guardados, setGuardados] = useState<string[]>(
-    tienda.banners_url?.length ? tienda.banners_url : tienda.banner_url ? [tienda.banner_url] : [],
+  // Banners: cada uno con su imagen de computadora (4:1) y, opcional, la de celular (2:1)
+  const [slots, setSlots] = useState<Slot[]>(() =>
+    (tienda.banners_url?.length ? tienda.banners_url : tienda.banner_url ? [tienda.banner_url] : []).slice(0, MAX_BANNERS).map((u, i) => {
+      const m = tienda.banners_movil_url?.[i];
+      return { id: u, pc: guardada(u), movil: m ? guardada(m) : null };
+    }),
   );
-  const [nuevos, setNuevos] = useState<{ archivo: File; vista: string }[]>([]);
   const [optimizando, setOptimizando] = useState(false);
   const [portada, setPortada] = useState(tienda.color_portada ?? "");
-  const totalBanners = guardados.length + nuevos.length;
 
   const colorValido = Boolean(normalizarColor(principal) && normalizarColor(encabezado) && (!portada || normalizarColor(portada)));
   const vars = colorValido ? variablesTema(principal, encabezado) : {};
-  const fondo = guardados[0] ?? nuevos[0]?.vista ?? null;
+  // La vista previa es de celular: muestra la imagen de celular del primero si la tiene
+  const primero = slots[0];
+  const fondo = primero ? (primero.movil ?? primero.pc).vista : null;
+  const fondoMovil = Boolean(primero?.movil);
+
+  async function optimizar(f: File, ancho: number): Promise<Img> {
+    const o = await optimizarImagen(f, ancho);
+    return { archivo: o, vista: URL.createObjectURL(o) };
+  }
 
   async function agregar(e: React.ChangeEvent<HTMLInputElement>) {
-    const elegidos = Array.from(e.target.files ?? []).slice(0, MAX_BANNERS - totalBanners);
+    const elegidos = Array.from(e.target.files ?? []).slice(0, MAX_BANNERS - slots.length);
     e.target.value = "";
     if (!elegidos.length) return;
     setOptimizando(true);
-    const listos: { archivo: File; vista: string }[] = [];
+    const listos: Slot[] = [];
     for (const f of elegidos) {
-      const o = await optimizarImagen(f, 1600);
-      listos.push({ archivo: o, vista: URL.createObjectURL(o) });
+      const pc = await optimizar(f, 1600);
+      listos.push({ id: pc.vista, pc, movil: null });
     }
-    setNuevos((n) => [...n, ...listos]);
+    setSlots((l) => [...l, ...listos]);
     setOptimizando(false);
+  }
+
+  async function ponerMovil(id: string, e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    setOptimizando(true);
+    const movil = await optimizar(f, 1200);
+    setSlots((l) => l.map((x) => (x.id === id ? (soltar(x.movil), { ...x, movil }) : x)));
+    setOptimizando(false);
+  }
+
+  function quitar(id: string) {
+    setSlots((l) => {
+      const x = l.find((y) => y.id === id);
+      if (x) [x.pc, x.movil].forEach(soltar);
+      return l.filter((y) => y.id !== id);
+    });
+  }
+
+  function quitarMovil(id: string) {
+    setSlots((l) => l.map((x) => (x.id === id ? (soltar(x.movil), { ...x, movil: null }) : x)));
   }
 
   return (
@@ -102,7 +140,17 @@ export default function FormularioApariencia({ tienda, sugeridos, accion }: Prop
       onSubmit={(e) => {
         e.preventDefault();
         const datos = new FormData(e.currentTarget);
-        nuevos.forEach((n) => datos.append("banners_nuevos", n.archivo));
+        // Los archivos nuevos van en "banners_archivos"; el plan dice cuál va en cada banner
+        const archivos: File[] = [];
+        const ref = (i: Img | null) => {
+          if (!i) return null;
+          if (i.url) return { url: i.url };
+          archivos.push(i.archivo!);
+          return { nuevo: archivos.length - 1 };
+        };
+        const plan = slots.map((x) => ({ pc: ref(x.pc), movil: ref(x.movil) }));
+        datos.set("banners_plan", JSON.stringify(plan));
+        archivos.forEach((a) => datos.append("banners_archivos", a));
         startTransition(() => enviar(datos));
       }}
       className="grid gap-6 lg:grid-cols-[1fr_360px]"
@@ -113,47 +161,63 @@ export default function FormularioApariencia({ tienda, sugeridos, accion }: Prop
 
         <div className="space-y-2">
           <span className="text-sm font-medium">Banners de la portada (hasta {MAX_BANNERS})</span>
-          <p className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-900">
-            <b>Medida recomendada: 1600 × 400 píxeles</b> (horizontal, 4 veces más ancho que alto). Se ven completos en celular,
-            computadora y con cualquier zoom; si la imagen tiene otra medida no se corta. Con varios banners, pasan solos cada 4 segundos.
-          </p>
-          <div className="grid gap-2 sm:grid-cols-3">
-            {guardados.map((src, i) => (
-              <div key={src} className="relative aspect-[4/1] overflow-hidden rounded-lg border bg-gray-100">
-                <input type="hidden" name="banners_conservar" value={src} />
-                <img src={src} alt={`Banner ${i + 1}`} className="h-full w-full object-contain" />
-                <button type="button" onClick={() => setGuardados((g) => g.filter((x) => x !== src))} aria-label="Quitar banner" className="absolute right-1 top-1 rounded-full bg-black/70 px-1.5 text-xs font-bold text-white">
-                  ×
-                </button>
+          <div className="space-y-1 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-900">
+            <p>
+              <b>Computadora: 1600 × 400 píxeles</b> (4 veces más ancho que alto).
+            </p>
+            <p>
+              <b>Celular (opcional): 1200 × 600 píxeles</b> (el doble de ancho que de alto). Haz una versión con letras más grandes para
+              que se lea bien en el teléfono; si no la subes, en el celular se ve la de computadora.
+            </p>
+            <p>Siempre se ven completos, con cualquier pantalla o zoom. Con varios banners, pasan solos cada 4 segundos.</p>
+          </div>
+          <div className="space-y-2">
+            {slots.map((x, i) => (
+              <div key={x.id} className="grid grid-cols-[2fr_1fr] items-start gap-2 rounded-lg border bg-white p-2">
+                <div className="space-y-1">
+                  <span className="text-[11px] font-medium text-gray-600">Banner {i + 1} · Computadora</span>
+                  <div className="relative aspect-[4/1] overflow-hidden rounded-md border bg-gray-100">
+                    <img src={x.pc.vista} alt={`Banner ${i + 1}`} className="h-full w-full object-contain" />
+                    {x.pc.archivo && <span className="absolute bottom-0.5 left-0.5 rounded bg-black/70 px-1 text-[10px] text-white">Nuevo</span>}
+                    <button type="button" onClick={() => quitar(x.id)} aria-label={`Quitar banner ${i + 1}`} className="absolute right-1 top-1 rounded-full bg-black/70 px-1.5 text-xs font-bold text-white">
+                      ×
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[11px] font-medium text-gray-600">Celular</span>
+                  {x.movil ? (
+                    <div className="relative aspect-[2/1] overflow-hidden rounded-md border bg-gray-100">
+                      <img src={x.movil.vista} alt={`Banner ${i + 1} para celular`} className="h-full w-full object-contain" />
+                      {x.movil.archivo && <span className="absolute bottom-0.5 left-0.5 rounded bg-black/70 px-1 text-[10px] text-white">Nuevo</span>}
+                      <button type="button" onClick={() => quitarMovil(x.id)} aria-label={`Quitar imagen de celular del banner ${i + 1}`} className="absolute right-1 top-1 rounded-full bg-black/70 px-1.5 text-xs font-bold text-white">
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="grid aspect-[2/1] cursor-pointer place-items-center rounded-md border-2 border-dashed border-gray-300 px-1 text-center text-[11px] leading-tight text-gray-600 hover:border-marca-400">
+                      {optimizando ? "Optimizando…" : "+ Imagen para celular"}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        className="sr-only"
+                        aria-label={`Imagen para celular del banner ${i + 1}`}
+                        onChange={(e) => ponerMovil(x.id, e)}
+                        disabled={optimizando}
+                      />
+                    </label>
+                  )}
+                </div>
               </div>
             ))}
-            {nuevos.map((n, i) => (
-              <div key={n.vista} className="relative aspect-[4/1] overflow-hidden rounded-lg border bg-gray-100">
-                <img src={n.vista} alt="" className="h-full w-full object-contain" />
-                <span className="absolute bottom-0.5 left-0.5 rounded bg-black/70 px-1 text-[10px] text-white">Nuevo</span>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setNuevos((l) => {
-                      URL.revokeObjectURL(l[i].vista);
-                      return l.filter((_, j) => j !== i);
-                    })
-                  }
-                  aria-label="Quitar banner"
-                  className="absolute right-1 top-1 rounded-full bg-black/70 px-1.5 text-xs font-bold text-white"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-            {totalBanners < MAX_BANNERS && (
-              <label className="grid aspect-[4/1] cursor-pointer place-items-center rounded-lg border-2 border-dashed border-gray-300 text-xs text-gray-600 hover:border-marca-400">
-                {optimizando ? "Optimizando…" : `+ Agregar banner (${totalBanners}/${MAX_BANNERS})`}
+            {slots.length < MAX_BANNERS && (
+              <label className="grid h-14 cursor-pointer place-items-center rounded-lg border-2 border-dashed border-gray-300 text-xs text-gray-600 hover:border-marca-400">
+                {optimizando ? "Optimizando…" : `+ Agregar banner (${slots.length}/${MAX_BANNERS})`}
                 <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple className="sr-only" onChange={agregar} disabled={optimizando} />
               </label>
             )}
           </div>
-          {totalBanners === 0 && <p className="text-xs text-gray-500">Sin banner, la portada usa el color de la barra.</p>}
+          {slots.length === 0 && <p className="text-xs text-gray-500">Sin banner, la portada usa el color de la barra.</p>}
         </div>
 
         <SelectorColor
@@ -206,7 +270,7 @@ export default function FormularioApariencia({ tienda, sugeridos, accion }: Prop
           <div className="relative bg-encabezado text-encabezado-texto" style={estiloPortada(portada)}>
             {fondo && (
               <div className="px-3 pt-3">
-                <div className="relative aspect-[4/1] overflow-hidden rounded-md bg-black/10">
+                <div className={`relative overflow-hidden rounded-md bg-black/10 ${fondoMovil ? "aspect-[2/1]" : "aspect-[4/1]"}`}>
                   <img src={fondo} alt="" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-xl" />
                   <img src={fondo} alt="" className="relative h-full w-full object-contain" />
                 </div>
