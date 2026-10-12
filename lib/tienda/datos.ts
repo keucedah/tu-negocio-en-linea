@@ -19,20 +19,20 @@ const COLUMNAS_BASE =
   "id, slug, nombre_tienda, logo_url, logo_path, codigo_pais, celular, activa, tipo_negocio_id, tipo_negocio_otro, " +
   "color_principal, color_encabezado, titulo_portada, texto_portada, texto_buscador, banner_url, banner_path, " +
   "tipo:tipos_negocio(nombre, titulo_portada, texto_portada, texto_buscador)";
-const COLUMNAS_TIENDA = COLUMNAS_BASE + ", banners_url, banners_path, color_portada";
+const COLUMNAS_24 = COLUMNAS_BASE + ", banners_url, banners_path, color_portada";
+const COLUMNAS_TIENDA = COLUMNAS_24 + ", banners_movil_url, banners_movil_path";
 
 type Consulta = ReturnType<typeof crearClientePublico>;
 
-/** Lee la fila de la tienda. Si todavía no se ejecutó el SQL de la 2.4 (sin columnas de banners), lee sin ellas. */
+/** Lee la fila de la tienda. Si todavía no se ejecutó el SQL de la 2.4.1 o de la 2.4, lee sin esas columnas. */
 async function leerFila(supabase: Consulta, slug: string): Promise<FilaTienda | null> {
-  const r = await supabase.from("tiendas").select(COLUMNAS_TIENDA).eq("slug", slug).maybeSingle<FilaTienda>();
-  if (r.error?.code === "42703") {
-    const r2 = await supabase.from("tiendas").select(COLUMNAS_BASE).eq("slug", slug).maybeSingle<FilaTienda>();
-    if (r2.error) throw r2.error;
-    return r2.data;
+  for (const columnas of [COLUMNAS_TIENDA, COLUMNAS_24, COLUMNAS_BASE]) {
+    const r = await supabase.from("tiendas").select(columnas).eq("slug", slug).maybeSingle<FilaTienda>();
+    if (r.error?.code === "42703") continue; // Falta una columna nueva: prueba sin ella
+    if (r.error) throw r.error;
+    return r.data;
   }
-  if (r.error) throw r.error;
-  return r.data;
+  return null;
 }
 
 // Textos de la portada cuando ni la tienda ni su tipo de negocio tienen uno.
@@ -101,7 +101,10 @@ export function aTienda(t: FilaTienda): Tienda {
     textoBuscador: t.texto_buscador || t.tipo?.texto_buscador || PORTADA.buscador,
     bannerUrl: t.banner_url,
     colorPortada: t.color_portada ?? "",
-    banners: t.banners_url?.length ? t.banners_url.slice(0, 3) : t.banner_url ? [t.banner_url] : [],
+    banners: (t.banners_url?.length ? t.banners_url.slice(0, 3) : t.banner_url ? [t.banner_url] : []).map((pc, i) => ({
+      pc,
+      movil: t.banners_movil_url?.[i] ?? "",
+    })),
   };
 }
 
