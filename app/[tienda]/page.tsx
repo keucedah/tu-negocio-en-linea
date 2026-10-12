@@ -44,11 +44,15 @@ export default async function Inicio({
   return (
     <>
       {/* Portada: hasta 3 banners en carrusel (4:1, siempre completos con cualquier pantalla o zoom).
-          El título y el texto van debajo, sobre el color que elija el dueño, para no tapar la imagen. */}
-      {tienda.banners.length > 0 && <Banners banners={tienda.banners} nombre={tienda.nombre} />}
+          Del mismo ancho que las tarjetas; el título y el texto van debajo, sobre el color que elija el dueño. */}
       <section className="relative overflow-hidden bg-encabezado text-encabezado-texto" style={estiloPortada(tienda.colorPortada)}>
         {!tienda.colorPortada && <div className="absolute inset-0 bg-gradient-to-r from-encabezado to-encabezado-2" />}
-        <div className={`relative mx-auto max-w-6xl px-4 ${tienda.banners.length ? "py-6" : "py-10"}`}>
+        {tienda.banners.length > 0 && (
+          <div className="relative mx-auto max-w-6xl px-4 pt-4">
+            <Banners banners={tienda.banners} nombre={tienda.nombre} />
+          </div>
+        )}
+        <div className={`relative mx-auto max-w-6xl px-4 ${tienda.banners.length ? "pb-6 pt-4" : "py-10"}`}>
           <h1 className="max-w-2xl text-2xl font-bold sm:text-4xl">{tienda.tituloPortada}</h1>
           <p className="mt-2 max-w-xl opacity-80">{tienda.textoPortada}</p>
         </div>
