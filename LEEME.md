@@ -8,6 +8,13 @@ Plataforma SaaS de catálogos en línea: tu página, tu panel de clientes y la t
 
 Los pasos completos están en la guía `guia-plataforma.pdf`.
 
+## Novedades de la 2.3.1
+
+El banner de la tienda se ve siempre completo, en su proporción (1600 × 600), en celular, computadora y con
+cualquier zoom del navegador; ya no se corta arriba ni abajo. El título y el texto de la portada van en una
+franja debajo del banner, para no tapar lo que trae la imagen. No cambia la base de datos ni la App: solo
+sube `app/[tienda]/page.tsx` y `components/tienda/admin/FormularioApariencia.tsx` (y `package.json`).
+
 ## Novedades de la 2.3
 
 **Antes de subir esta versión, ejecuta en Supabase > SQL Editor `supabase/actualizacion-2.3.sql`.**
