@@ -30,6 +30,19 @@ export const MUESTRAS_ENCABEZADO = [
   { nombre: "Blanco", hex: "#ffffff" },
 ];
 
+/** Fondo del título y el texto de la portada. */
+export const MUESTRAS_PORTADA = [
+  { nombre: "Blanco", hex: "#ffffff" },
+  { nombre: "Gris claro", hex: "#f3f4f6" },
+  { nombre: "Crema", hex: "#fff7ed" },
+  { nombre: "Naranja", hex: "#ea580c" },
+  { nombre: "Rojo", hex: "#b91c1c" },
+  { nombre: "Azul", hex: "#1d4ed8" },
+  { nombre: "Verde", hex: "#15803d" },
+  { nombre: "Gris oscuro", hex: "#111827" },
+  { nombre: "Negro", hex: "#0a0a0a" },
+];
+
 /** "#EA580C" o "ea580c" → "#ea580c". Vacío si no es un color válido. */
 export function normalizarColor(texto: string): string {
   const v = texto.trim().toLowerCase().replace(/^#?/, "#");
@@ -78,4 +91,11 @@ export function variablesTema(principal: string, encabezado: string): Record<str
     "--encabezado-2": mezclar(e, esClaro(encabezado) ? -0.06 : 0.12),
     "--encabezado-texto": esClaro(encabezado) ? "17 24 39" : "255 255 255",
   };
+}
+
+/** Estilo de la franja del título de la portada: su color de fondo y un texto que se lea encima. */
+export function estiloPortada(color: string): { backgroundColor: string; color: string } | undefined {
+  const c = normalizarColor(color);
+  if (!c) return undefined;
+  return { backgroundColor: c, color: esClaro(c) ? "#111827" : "#ffffff" };
 }

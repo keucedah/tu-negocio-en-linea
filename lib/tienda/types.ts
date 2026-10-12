@@ -56,6 +56,11 @@ export type FilaTienda = {
   texto_buscador: string;
   banner_url: string | null;
   banner_path: string | null;
+  /** Hasta 3 banners en orden (2.4). Pueden faltar si no se ejecutó el SQL de la 2.4. */
+  banners_url?: string[];
+  banners_path?: string[];
+  /** Fondo del título de la portada (2.4). Vacío = el de la barra. */
+  color_portada?: string;
   tipo: Pick<TipoNegocio, "nombre" | "titulo_portada" | "texto_portada" | "texto_buscador"> | null;
 };
 
@@ -74,4 +79,7 @@ export type Tienda = {
   textoPortada: string;
   textoBuscador: string;
   bannerUrl: string | null;
+  /** Banners del carrusel de la portada (hasta 3). */
+  banners: string[];
+  colorPortada: string;
 };

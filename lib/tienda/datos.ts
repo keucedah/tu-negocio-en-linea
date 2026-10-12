@@ -15,10 +15,25 @@ export { leerFiltros } from "./filtros";
 
 const COLUMNAS_PRODUCTO =
   "id, nombre, descripcion, categoria_id, imagen_url, imagen_path, imagen_mini_url, precio, tallas, destacado, orden_destacado, creado_en";
-const COLUMNAS_TIENDA =
+const COLUMNAS_BASE =
   "id, slug, nombre_tienda, logo_url, logo_path, codigo_pais, celular, activa, tipo_negocio_id, tipo_negocio_otro, " +
   "color_principal, color_encabezado, titulo_portada, texto_portada, texto_buscador, banner_url, banner_path, " +
   "tipo:tipos_negocio(nombre, titulo_portada, texto_portada, texto_buscador)";
+const COLUMNAS_TIENDA = COLUMNAS_BASE + ", banners_url, banners_path, color_portada";
+
+type Consulta = ReturnType<typeof crearClientePublico>;
+
+/** Lee la fila de la tienda. Si todavía no se ejecutó el SQL de la 2.4 (sin columnas de banners), lee sin ellas. */
+async function leerFila(supabase: Consulta, slug: string): Promise<FilaTienda | null> {
+  const r = await supabase.from("tiendas").select(COLUMNAS_TIENDA).eq("slug", slug).maybeSingle<FilaTienda>();
+  if (r.error?.code === "42703") {
+    const r2 = await supabase.from("tiendas").select(COLUMNAS_BASE).eq("slug", slug).maybeSingle<FilaTienda>();
+    if (r2.error) throw r2.error;
+    return r2.data;
+  }
+  if (r.error) throw r.error;
+  return r.data;
+}
 
 // Textos de la portada cuando ni la tienda ni su tipo de negocio tienen uno.
 const PORTADA = {
@@ -63,8 +78,11 @@ function demoTienda(slug: string): FilaTienda {
 export const obtenerFilaTienda = cache(async (slug: string): Promise<FilaTienda | null> => {
   if (!supabaseConfigurado) return demoTienda(slug);
   const supabase = await crearClienteServidor();
-  const { data } = await supabase.from("tiendas").select(COLUMNAS_TIENDA).eq("slug", slug).maybeSingle<FilaTienda>();
-  return data;
+  try {
+    return await leerFila(supabase as unknown as Consulta, slug);
+  } catch {
+    return null;
+  }
 });
 
 export function aTienda(t: FilaTienda): Tienda {
@@ -82,6 +100,8 @@ export function aTienda(t: FilaTienda): Tienda {
     textoPortada: t.texto_portada || t.tipo?.texto_portada || PORTADA.texto,
     textoBuscador: t.texto_buscador || t.tipo?.texto_buscador || PORTADA.buscador,
     bannerUrl: t.banner_url,
+    colorPortada: t.color_portada ?? "",
+    banners: t.banners_url?.length ? t.banners_url.slice(0, 3) : t.banner_url ? [t.banner_url] : [],
   };
 }
 
@@ -95,9 +115,7 @@ const opcionesCache = { tags: [TAG_CATALOGO], revalidate: SEGUNDOS_CACHE };
 
 const filaPublica = unstable_cache(
   async (slug: string): Promise<FilaTienda | null> => {
-    const { data, error } = await crearClientePublico().from("tiendas").select(COLUMNAS_TIENDA).eq("slug", slug).maybeSingle<FilaTienda>();
-    if (error) throw error;
-    return data;
+    return leerFila(crearClientePublico(), slug);
   },
   ["tienda-publica"],
   opcionesCache,

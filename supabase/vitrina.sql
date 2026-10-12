@@ -794,3 +794,37 @@ drop policy if exists "admin ve anuncios" on storage.objects;
 create policy "admin ve anuncios" on storage.objects
   for select to authenticated
   using (bucket_id = 'imagenes' and split_part(name, '/', 1) = 'anuncios' and (select public.es_admin_panel()));
+
+
+-- ===== Versión 2.4: banners en carrusel y color de la portada =====
+
+-- Todos los banners de la tienda, en orden (dirección pública y ruta en Storage).
+-- banner_url y banner_path siguen guardando el primero, que es el que usa la App.
+alter table public.tiendas add column if not exists banners_url text[] not null default '{}';
+alter table public.tiendas add column if not exists banners_path text[] not null default '{}';
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'tiendas_banners_max') then
+    alter table public.tiendas add constraint tiendas_banners_max
+      check (cardinality(banners_url) <= 3 and cardinality(banners_path) <= 3);
+  end if;
+end $$;
+
+-- Tiendas que ya tienen banner: ese pasa a ser el primero del carrusel
+update public.tiendas
+   set banners_url = array[banner_url], banners_path = array[coalesce(banner_path, '')]
+ where banner_url is not null and cardinality(banners_url) = 0;
+
+-- Color del fondo del título y el texto de la portada (vacío = el mismo de la barra de arriba)
+alter table public.tiendas add column if not exists color_portada text not null default '';
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'tiendas_color_portada_check') then
+    alter table public.tiendas add constraint tiendas_color_portada_check
+      check (color_portada = '' or color_portada ~ '^#[0-9a-f]{6}$');
+  end if;
+end $$;
+
+-- El dueño de la tienda puede cambiar sus banners y ese color desde su panel
+grant update (banners_url, banners_path, color_portada) on public.tiendas to authenticated;
