@@ -203,14 +203,16 @@ export default function FormularioApariencia({ tienda, sugeridos, accion }: Prop
             </span>
             <span className="rounded bg-encabezado-texto/10 px-2 py-0.5 text-xs">Mi pedido</span>
           </div>
-          {fondo && (
-            <div className="relative aspect-[4/1] overflow-hidden bg-encabezado">
-              <img src={fondo} alt="" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-xl" />
-              <img src={fondo} alt="" className="relative h-full w-full object-contain" />
-            </div>
-          )}
           <div className="relative bg-encabezado text-encabezado-texto" style={estiloPortada(portada)}>
-            <div className={`relative px-3 ${fondo ? "py-3" : "py-5"}`}>
+            {fondo && (
+              <div className="px-3 pt-3">
+                <div className="relative aspect-[4/1] overflow-hidden rounded-md bg-black/10">
+                  <img src={fondo} alt="" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-xl" />
+                  <img src={fondo} alt="" className="relative h-full w-full object-contain" />
+                </div>
+              </div>
+            )}
+            <div className={`relative px-3 ${fondo ? "pb-3 pt-2" : "py-5"}`}>
               <p className="text-base font-bold leading-tight">{titulo || sugeridos.titulo}</p>
               <p className="mt-1 text-xs opacity-90">{texto || sugeridos.texto}</p>
             </div>
