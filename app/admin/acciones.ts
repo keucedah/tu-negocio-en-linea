@@ -106,8 +106,11 @@ export async function guardarCliente(_prev: Resultado, f: FormData): Promise<Res
     };
     // Municipio de su tienda (2.5): solo si el formulario lo trae
     if (f.has("municipio_id")) datos.municipio_id = Number(f.get("municipio_id")) || null;
+    // "Servicio de mototaxi" (2.5.1): solo el administrador lo cambia
+    if (f.has("campo_mototaxi")) datos.ofrece_mototaxi = f.get("ofrece_mototaxi") === "on";
     const quitarMunicipio = () => {
       delete datos.municipio_id;
+      delete datos.ofrece_mototaxi;
     };
 
     if (id) {
