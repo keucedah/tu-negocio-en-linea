@@ -8,6 +8,31 @@ Plataforma SaaS de catálogos en línea: tu página, tu panel de clientes y la t
 
 Los pasos completos están en la guía `guia-plataforma.pdf`.
 
+## Novedades de la 2.5: mototaxis y publicidad
+
+**Antes de subir el sitio**, ejecuta `supabase/actualizacion-2.5.sql` en el SQL Editor del proyecto
+**tu-negocio-en-linea** (no en "ferreteria"). Se puede ejecutar más de una vez sin dañar nada.
+Si subes el sitio sin el SQL, sigue funcionando pero sin las partes nuevas.
+
+- **Municipios**: vienen los 18 departamentos y Langue (Valle). Agregas más desde Admin › Mototaxistas ›
+  Municipios o al editar un cliente ("+ Nuevo municipio"); no deja repetir nombres.
+- **Clientes**: "Dirección de la tienda" y municipio. **Asigna el municipio a cada cliente que ya tienes**,
+  si no, su tienda no muestra mototaxistas.
+- **Mototaxistas** (Admin › Mototaxistas): código automático MT-001, fotos de la persona y de la moto,
+  permiso para publicar sus datos, municipios extra, cuota especial, pagos con recibo en PDF (MT001-0001),
+  aviso de cobro por WhatsApp y un enlace personal donde ve su estado (`/mototaxi/...`, no sale en Google).
+  Si no paga, sale en gris en las tiendas y no lo pueden elegir. La identidad nunca sale de la base de datos.
+- **Tienda**: el carrito tiene "Enviar con mototaxi". El cliente elige un mototaxista de su municipio, se
+  descarga una imagen con el pedido y se abre WhatsApp del mototaxista. El dueño lo puede apagar en su
+  panel ("Ofrecer 'Enviar con mototaxi'"); viene encendido.
+- **Publicidad** (Admin › Publicidad): anuncios pagados de otras tiendas u otros negocios. Salen solo en
+  tiendas con un plan que tenga marcado "Muestra publicidad de otras tiendas" (Básico y Pro), nunca en la
+  tienda que se anuncia ni en tiendas del mismo tipo de negocio. Se puede limitar a un municipio y a fechas.
+  Cuenta vistas y clics. Los anuncios propios (sorteos y premios) siguen igual en todos los planes.
+- **Ajustes**: mensualidad del mototaxista (L 50) y precio de carga extra de productos (L 150 por cada 50).
+- **Página principal**: Instalación incluye "Te cargamos tus primeros 100 productos sin costo"; los planes
+  sin publicidad lo dicen.
+
 ## Novedades de la 2.4.2: SEO (Google)
 
 No cambia la base de datos ni la App.

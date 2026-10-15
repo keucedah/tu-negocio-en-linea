@@ -11,7 +11,7 @@ const nextConfig = {
       headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" }],
     }));
     // Paneles y páginas para entrar: Google no debe mostrarlas (también en el dominio propio de cada tienda)
-    const privadas = ["/admin", "/admin/:path*", "/entrar", "/:tienda/admin", "/:tienda/admin/:path*", "/:tienda/entrar"].map((source) => ({
+    const privadas = ["/admin", "/admin/:path*", "/entrar", "/:tienda/admin", "/:tienda/admin/:path*", "/:tienda/entrar", "/mototaxi/:path*"].map((source) => ({
       source,
       headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
     }));

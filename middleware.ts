@@ -5,12 +5,13 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL, supabaseConfigurado } from "@/lib/conf
 // Una sola plataforma para todo:
 //   sitio.com/            → página principal de la plataforma
 //   sitio.com/admin       → tu panel de clientes (sin sesión → /entrar)
+//   sitio.com/mototaxi/…  → página personal de un mototaxista (enlace privado)
 //   sitio.com/ana/...     → tienda "ana" (sin sesión, /ana/admin → /ana/entrar)
 //   ana.com/...           → tienda "ana" por su dominio propio (se busca en tiendas.dominio)
 
 const HOSTS_SIN_DOMINIO = /(^localhost$)|(^127\.0\.0\.1$)|(\.vercel\.app$)/;
 // Primeras partes de la ruta que son de la plataforma, no de una tienda.
-const RUTAS_PLATAFORMA = new Set(["", "admin", "entrar", "api"]);
+const RUTAS_PLATAFORMA = new Set(["", "admin", "entrar", "api", "mototaxi"]);
 const MINUTOS_CACHE = 5;
 const dominios = new Map<string, { slug: string | null; hasta: number }>();
 
@@ -47,7 +48,9 @@ export async function middleware(request: NextRequest) {
 
   const primera = ruta.split("/")[1] ?? "";
   const esPlataforma = !slug && RUTAS_PLATAFORMA.has(primera);
-  if (slug) {
+  if (slug && primera === "api") {
+    // Los contadores (/api/contar) son de la plataforma también en los dominios propios
+  } else if (slug) {
     // Dominio propio: los enlaces no llevan la dirección de la tienda
     rutaInterna = `/${slug}${ruta === "/" ? "" : ruta}`;
   } else if (!esPlataforma) {
