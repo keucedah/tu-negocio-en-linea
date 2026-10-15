@@ -111,6 +111,16 @@ export default function FormularioCliente({
           ayuda="En su tienda salen los mototaxistas de este municipio."
         />
       )}
+      {ubicaciones && (
+        <label className="flex items-start gap-2 rounded-xl border bg-gray-50 p-3 text-sm">
+          <input type="hidden" name="campo_mototaxi" value="1" />
+          <input type="checkbox" name="ofrece_mototaxi" defaultChecked={cliente?.ofrece_mototaxi ?? true} className="mt-0.5 h-4 w-4" />
+          <span>
+            <span className="font-medium">🛺 Servicio de mototaxi en su tienda</span>
+            <span className="block text-gray-500">Muestra “Enviar con mototaxi” en el carrito. Solo tú lo puedes cambiar.</span>
+          </span>
+        </label>
+      )}
       {cliente?.tienda_id || tienda ? (
         <input type="hidden" name="sitio_url" value={cliente?.sitio_url ?? ""} />
       ) : (

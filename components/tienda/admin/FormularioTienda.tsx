@@ -96,16 +96,12 @@ export default function FormularioTienda({ config, accion }: Props) {
 
       {config.ofrece_mototaxi !== undefined && (
         <div className="space-y-2 rounded-xl border p-3">
-          <input type="hidden" name="campo_mototaxi" value="1" />
-          <label className="flex items-start gap-2 text-sm">
-            <input type="checkbox" name="ofrece_mototaxi" defaultChecked={config.ofrece_mototaxi} className="mt-0.5 h-4 w-4" />
-            <span>
-              <span className="font-medium">Ofrecer “Enviar con mototaxi” en el carrito</span>
-              <span className="block text-xs text-gray-500">
-                El cliente elige un mototaxista de tu municipio, que viene a tu tienda por el pedido y se lo lleva.
-              </span>
+          <p className="text-sm">
+            <span className="font-medium">🛺 Enviar con mototaxi: {config.ofrece_mototaxi ? "activado" : "desactivado"}</span>
+            <span className="block text-xs text-gray-500">
+              El cliente elige un mototaxista de tu municipio, que viene a tu tienda por el pedido y se lo lleva. Para cambiarlo, pídeselo a tu proveedor.
             </span>
-          </label>
+          </p>
           <p className="text-xs text-gray-600">
             <b>Dirección de tu tienda:</b> {config.direccion || "sin dirección"}
             {config.municipio?.nombre && ` · ${config.municipio.nombre}`}

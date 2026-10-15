@@ -41,7 +41,11 @@ function datosControlados(cliente: Cliente, plan: Plan | undefined) {
 }
 
 /** Desde la 2.5 la tienda también lleva la dirección y el municipio de su cliente (para los mototaxis). */
-const datos25 = (cliente: Cliente) => ({ direccion: cliente.direccion.slice(0, 200), municipio_id: cliente.municipio_id ?? null });
+const datos25 = (cliente: Cliente) => ({
+  direccion: cliente.direccion.slice(0, 200),
+  municipio_id: cliente.municipio_id ?? null,
+  ofrece_mototaxi: cliente.ofrece_mototaxi,
+});
 
 /** Columna que todavía no existe porque falta el SQL de la 2.5. */
 export const faltaColumna = (e: { code?: string; message?: string } | null) =>
@@ -79,6 +83,7 @@ export async function sincronizarTienda(cliente: Cliente, plan: Plan | undefined
   if (faltaColumna(error)) {
     delete cambios.direccion;
     delete cambios.municipio_id;
+    delete cambios.ofrece_mototaxi;
     ({ error } = await sb.from("tiendas").update(cambios).eq("id", cliente.tienda_id));
   }
   return error ? "No se pudo actualizar su tienda: " + errorDominio(error.message) : null;

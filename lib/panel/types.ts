@@ -59,6 +59,8 @@ export type Cliente = {
   tienda_id: number | null;
   /** Municipio de su tienda (2.5): ahí salen sus mototaxistas. */
   municipio_id: number | null;
+  /** "Servicio de mototaxi" en su tienda: solo el administrador lo cambia (2.5.1). */
+  ofrece_mototaxi: boolean;
   creado_en: string;
 };
 

@@ -92,11 +92,12 @@ export const obtenerPlanes = cache(async (): Promise<Plan[]> => {
 
 const COLUMNAS_CLIENTE =
   "id, negocio, contacto, codigo_pais, celular, correo, direccion, sitio_url, dominio, plan_id, con_dominio, limite_personalizado, cuota_personalizada, estado, fecha_inicio, proximo_pago, instalacion_pagada, notas, tipo_negocio_id, tipo_negocio_otro, tienda_id, creado_en";
-const COLUMNAS_CLIENTE_25 = COLUMNAS_CLIENTE + ", municipio_id";
+const COLUMNAS_CLIENTE_25 = COLUMNAS_CLIENTE + ", municipio_id, ofrece_mototaxi";
 
 const aCliente = (c: Cliente): Cliente => ({
   ...c,
   municipio_id: c.municipio_id ?? null,
+  ofrece_mototaxi: c.ofrece_mototaxi !== false,
   cuota_personalizada: c.cuota_personalizada == null ? null : Number(c.cuota_personalizada),
 });
 const aPago = (p: Pago): Pago => ({ ...p, monto: Number(p.monto), numero_recibo: Number(p.numero_recibo) });

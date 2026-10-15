@@ -56,6 +56,7 @@ function cliente(id: number, c: Partial<Cliente> & Pick<Cliente, "negocio">): Cl
     tipo_negocio_otro: "",
     tienda_id: null,
     municipio_id: null,
+    ofrece_mototaxi: true,
     creado_en: sumarMeses(h, -4) + "T12:00:00Z",
     ...c,
   };
