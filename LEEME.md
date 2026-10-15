@@ -8,6 +8,18 @@ Plataforma SaaS de catálogos en línea: tu página, tu panel de clientes y la t
 
 Los pasos completos están en la guía `guia-plataforma.pdf`.
 
+## Novedades de la 2.6: App del mototaxista
+
+**Antes de subir el sitio**, ejecuta `supabase/actualizacion-2.6.sql` en el SQL Editor del proyecto
+**tu-negocio-en-linea** (no en "ferreteria"), después de la 2.5. Se puede ejecutar más de una vez.
+
+- **App del mototaxista** (carpeta `app-mototaxista`): una sola App para todos. Entra pegando su enlace
+  personal (el de `/mototaxi/...`). Ve su estado, se pone **Disponible** u **Ocupado** (vuelve solo a
+  Disponible a las 2 horas) y escribe al administrador por WhatsApp. "Nuevo enlace" la cierra.
+- **Tiendas (web y App 4.4)**: los ocupados salen en gris con la marca "Ocupado" y no se pueden elegir.
+  **Los suspendidos ya no salen.** La lista se actualiza cada minuto.
+- **Admin › Mototaxistas**: marca "Ocupado hasta las …" en cada mototaxista que lo esté.
+
 ## Novedades de la 2.5: mototaxis y publicidad
 
 **Antes de subir el sitio**, ejecuta `supabase/actualizacion-2.5.sql` en el SQL Editor del proyecto
@@ -21,7 +33,7 @@ Si subes el sitio sin el SQL, sigue funcionando pero sin las partes nuevas.
 - **Mototaxistas** (Admin › Mototaxistas): código automático MT-001, fotos de la persona y de la moto,
   permiso para publicar sus datos, municipios extra, cuota especial, pagos con recibo en PDF (MT001-0001),
   aviso de cobro por WhatsApp y un enlace personal donde ve su estado (`/mototaxi/...`, no sale en Google).
-  Si no paga, sale en gris en las tiendas y no lo pueden elegir. La identidad nunca sale de la base de datos.
+  Si no paga, deja de salir en las tiendas (2.6). La identidad nunca sale de la base de datos.
 - **Tienda**: el carrito tiene "Enviar con mototaxi". El cliente elige un mototaxista de su municipio, se
   descarga una imagen con el pedido y se abre WhatsApp del mototaxista. Viene encendido en todas las tiendas.
   **Solo el administrador** lo apaga o enciende, en la ficha del cliente ("Servicio de mototaxi en su tienda").
