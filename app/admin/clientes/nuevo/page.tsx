@@ -5,13 +5,14 @@ import { hoy, sumarMeses } from "@/lib/negocio";
 import { claveAleatoria } from "@/lib/clave";
 import { servicioConfigurado, supabaseConfigurado } from "@/lib/config";
 import { urlSitio } from "@/lib/url";
+import { obtenerUbicaciones } from "@/lib/panel/ubicaciones";
 
 // Se puede abrir con datos: /admin/clientes/nuevo?negocio=…&contacto=…&celular=… (desde Solicitudes)
 export const dynamic = "force-dynamic";
 
 export default async function NuevoCliente({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const q = await searchParams;
-  const [planes, ajustes, tipos] = await Promise.all([obtenerPlanes(), obtenerAjustes(), obtenerTipos()]);
+  const [planes, ajustes, tipos, ubicaciones] = await Promise.all([obtenerPlanes(), obtenerAjustes(), obtenerTipos(), obtenerUbicaciones()]);
   const h = hoy();
   const puedeCrearTienda = servicioConfigurado || !supabaseConfigurado;
   return (
@@ -23,6 +24,7 @@ export default async function NuevoCliente({ searchParams }: { searchParams: Pro
           cliente={{ negocio: q.negocio ?? "", contacto: q.contacto ?? "", celular: q.celular?.replace(/\D/g, "").replace(/^504(?=\d{8}$)/, "") ?? "" }}
           planes={planes}
           tipos={tipos}
+          ubicaciones={ubicaciones}
           precioDominio={ajustes.precio_dominio}
           hoy={h}
           proximoSugerido={sumarMeses(h, 1)}

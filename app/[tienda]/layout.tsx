@@ -8,6 +8,7 @@ import { BaseTienda } from "@/components/tienda/BaseTienda";
 import { obtenerBase, obtenerTiendaPublica as obtenerTienda } from "@/lib/tienda/datos";
 import { variablesTema } from "@/lib/tema";
 import { resumen, urlTienda } from "@/lib/seo";
+import { obtenerMototaxis } from "@/lib/mototaxis";
 
 type Props = { params: Promise<{ tienda: string }> };
 
@@ -46,7 +47,11 @@ export async function generateViewport({ params }: Props): Promise<Viewport> {
 export default async function LayoutTienda({ params, children }: Props & { children: React.ReactNode }) {
   const tienda = await obtenerTienda((await params).tienda);
   if (!tienda) notFound();
-  const base = await obtenerBase();
+  const [base, mototaxis] = await Promise.all([
+    obtenerBase(),
+    // "Enviar con mototaxi": solo si la tienda lo ofrece y tiene municipio
+    tienda.activa && tienda.ofreceMototaxi && tienda.municipioId ? obtenerMototaxis(tienda.id) : Promise.resolve([]),
+  ]);
 
   return (
     <div className="flex min-h-screen flex-col" style={variablesTema(tienda.colorPrincipal, tienda.colorEncabezado)}>
@@ -66,7 +71,11 @@ export default async function LayoutTienda({ params, children }: Props & { child
             © {new Date().getFullYear()} {tienda.nombre}. Precios y disponibilidad por WhatsApp.
           </footer>
           <WhatsAppFlotante whatsapp={tienda.whatsapp} tienda={tienda.nombre} />
-          <CartDrawer whatsapp={tienda.whatsapp} />
+          <CartDrawer
+            whatsapp={tienda.whatsapp}
+            mototaxis={mototaxis}
+            tienda={{ nombre: tienda.nombre, direccion: tienda.direccion, municipio: tienda.municipio, color: tienda.colorPrincipal, whatsapp: tienda.whatsapp }}
+          />
         </CartProvider>
       </BaseTienda>
     </div>

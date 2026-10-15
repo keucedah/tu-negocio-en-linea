@@ -15,13 +15,16 @@ import {
   NOMBRE_CONCEPTO, cuotaMensual, datosMensaje, enlaceWhatsApp, estadoCobro, fechaCorta, hoy, lempiras, limiteProductos, llenarPlantilla, sumarMeses, textoCobro,
 } from "@/lib/negocio";
 import { formatearCelular, numeroWhatsApp } from "@/lib/telefono";
+import { nombreMunicipio, obtenerUbicaciones } from "@/lib/panel/ubicaciones";
 
 export default async function FichaCliente({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ nuevo?: string; error_tienda?: string }> }) {
   const { id } = await params;
   const { nuevo, error_tienda } = await searchParams;
   const cliente = await obtenerCliente(Number(id));
   if (!cliente) notFound();
-  const [planes, ajustes, pagos, tipos] = await Promise.all([obtenerPlanes(), obtenerAjustes(), obtenerPagos(cliente.id), obtenerTipos()]);
+  const [planes, ajustes, pagos, tipos, ubicaciones] = await Promise.all([
+    obtenerPlanes(), obtenerAjustes(), obtenerPagos(cliente.id), obtenerTipos(), obtenerUbicaciones(),
+  ]);
   const tipo = nombreTipo(cliente, tipos);
 
   const plan = planes.find((p) => p.id === cliente.plan_id);
@@ -55,7 +58,7 @@ export default async function FichaCliente({ params, searchParams }: { params: P
         <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold">{cliente.negocio}</h1>
-            <p className="text-gray-600">{[tipo, cliente.contacto, celular, cliente.direccion].filter(Boolean).join(" · ")}</p>
+            <p className="text-gray-600">{[tipo, cliente.contacto, celular, cliente.direccion, nombreMunicipio(cliente.municipio_id, ubicaciones)].filter(Boolean).join(" · ")}</p>
             <div className="mt-2 flex flex-wrap gap-2">
               <InsigniaEstado estado={cliente.estado} />
               <InsigniaCobro estado={cobro.estado} texto={textoCobro(cobro)} />
@@ -216,7 +219,7 @@ export default async function FichaCliente({ params, searchParams }: { params: P
         <div className="space-y-6">
           <section className="tarjeta">
             <h2 className="mb-3 text-lg font-bold">Datos del cliente</h2>
-            <FormularioCliente cliente={cliente} planes={planes} tipos={tipos} precioDominio={ajustes.precio_dominio} hoy={h} proximoSugerido={sumarMeses(h, 1)} />
+            <FormularioCliente cliente={cliente} planes={planes} tipos={tipos} ubicaciones={ubicaciones} precioDominio={ajustes.precio_dominio} hoy={h} proximoSugerido={sumarMeses(h, 1)} />
           </section>
 
           <SeccionTienda cliente={cliente} ajustes={ajustes} />

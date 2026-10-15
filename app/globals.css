@@ -165,3 +165,14 @@ body {
     transform: scale(1.02);
   }
 }
+
+/* ---- Publicidad de otras tiendas (2.5) ---- */
+@media (prefers-reduced-motion: no-preference) {
+  .publicidad-entrar {
+    animation: publicidad-entrar 0.5s ease;
+  }
+}
+@keyframes publicidad-entrar {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

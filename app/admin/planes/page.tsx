@@ -48,6 +48,13 @@ function CamposPlan({ plan }: { plan?: Plan }) {
         <input type="checkbox" name="visible" defaultChecked={plan?.visible ?? true} className="h-4 w-4" />
         Mostrar en la página pública
       </label>
+      <label className="flex items-start gap-2 text-sm">
+        <input type="checkbox" name="con_publicidad" defaultChecked={plan?.con_publicidad ?? false} className="mt-0.5 h-4 w-4" />
+        <span>
+          Muestra publicidad de otras tiendas
+          <span className="block text-xs text-gray-500">Si lo desmarcas, en la página pública este plan dice “Sin publicidad de otras tiendas”. Tus anuncios (sorteos y premios) salen en todos los planes.</span>
+        </span>
+      </label>
     </>
   );
 }
@@ -68,7 +75,7 @@ export default async function Planes() {
               <div className="mb-3 flex items-start justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-bold">{p.nombre} {!p.visible && <span className="text-xs font-normal text-gray-500">(oculto)</span>}</h2>
-                  <p className="text-sm text-gray-500">{lempiras(p.precio_mensual)}/mes · {p.limite_productos.toLocaleString("es-HN")} productos · {usan} cliente(s)</p>
+                  <p className="text-sm text-gray-500">{lempiras(p.precio_mensual)}/mes · {p.limite_productos.toLocaleString("es-HN")} productos · {usan} cliente(s) · {p.con_publicidad ? "con publicidad" : "sin publicidad"}</p>
                 </div>
                 <BotonAccion accion={eliminarPlan.bind(null, p.id)} confirmacion={`¿Eliminar el plan “${p.nombre}”?`}>Eliminar</BotonAccion>
               </div>

@@ -47,6 +47,16 @@ export default async function Ajustes() {
               <span className="etiqueta">Precio del dominio (L al mes)</span>
               <input name="precio_dominio" inputMode="decimal" defaultValue={a.precio_dominio} className="campo" />
             </label>
+            <label className="block">
+              <span className="etiqueta">Productos adicionales (L por cada 50)</span>
+              <input name="precio_carga_extra" inputMode="decimal" defaultValue={a.precio_carga_extra} className="campo" />
+              <span className="mt-1 block text-xs text-gray-500">La instalación incluye los primeros 100 productos.</span>
+            </label>
+            <label className="block">
+              <span className="etiqueta">Mensualidad de cada mototaxista (L)</span>
+              <input name="cuota_mototaxi" inputMode="decimal" defaultValue={a.cuota_mototaxi} className="campo" />
+              <span className="mt-1 block text-xs text-gray-500">Los pagos ya registrados conservan su monto.</span>
+            </label>
           </div>
 
           <h2 className="border-t pt-4 text-lg font-bold">Cobros</h2>

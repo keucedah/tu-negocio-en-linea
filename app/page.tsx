@@ -38,6 +38,7 @@ const INSTALACION = [
   "Tus colores, logo y banner",
   "Conexión con tu WhatsApp",
   "Categorías iniciales de tu rubro",
+  "Te cargamos tus primeros 100 productos sin costo",
   "Capacitación básica del panel",
 ];
 
@@ -195,6 +196,9 @@ export default async function Inicio() {
                   <li key={t} className="flex items-start gap-2 text-sm"><IcoCheck className="mt-0.5 h-5 w-5 shrink-0" />{t}</li>
                 ))}
               </ul>
+              <p className="mt-4 rounded-xl bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                ¿Más de 100 productos? Los adicionales tienen un costo de <b className="text-gray-800">{lempiras(ajustes.precio_carga_extra)} por cada 50</b>, con tus fotos y datos listos.
+              </p>
             </div>
 
             <div>
@@ -227,6 +231,9 @@ export default async function Inicio() {
                           {p.caracteristicas.split("\n").filter(Boolean).map((t) => (
                             <li key={t} className="flex items-start gap-2"><IcoCheck className="mt-0.5 h-5 w-5 shrink-0" />{t}</li>
                           ))}
+                          {!p.con_publicidad && (
+                            <li className="flex items-start gap-2"><IcoCheck className="mt-0.5 h-5 w-5 shrink-0" />Sin publicidad de otras tiendas</li>
+                          )}
                         </ul>
                       </div>
                     </div>

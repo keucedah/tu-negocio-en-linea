@@ -8,7 +8,7 @@ import { obtenerAdminPanel } from "@/lib/supabase/server";
 import { supabaseConfigurado } from "@/lib/config";
 import { normalizarCelular } from "@/lib/telefono";
 import { hoy, sumarMeses } from "@/lib/negocio";
-import { cambiarClaveDuenos, crearTienda, sincronizarTienda, suspenderTienda } from "@/lib/panel/tiendas";
+import { cambiarClaveDuenos, crearTienda, faltaColumna, sincronizarTienda, suspenderTienda } from "@/lib/panel/tiendas";
 import type { Cliente, Plan } from "@/lib/panel/types";
 
 export type Resultado = { ok: boolean; mensaje: string } | null;
@@ -82,7 +82,7 @@ export async function guardarCliente(_prev: Resultado, f: FormData): Promise<Res
     if (cuota !== null && (Number.isNaN(cuota) || cuota < 0)) return { ok: false, mensaje: "La cuota mensual no es válida." };
 
     const estado = texto(f, "estado", 20);
-    const datos = {
+    const datos: Record<string, unknown> = {
       negocio,
       contacto: texto(f, "contacto", 120),
       codigo_pais: cel.codigo,
@@ -104,9 +104,18 @@ export async function guardarCliente(_prev: Resultado, f: FormData): Promise<Res
       tipo_negocio_otro: texto(f, "tipo_negocio_otro", 60),
       actualizado_en: new Date().toISOString(),
     };
+    // Municipio de su tienda (2.5): solo si el formulario lo trae
+    if (f.has("municipio_id")) datos.municipio_id = Number(f.get("municipio_id")) || null;
+    const quitarMunicipio = () => {
+      delete datos.municipio_id;
+    };
 
     if (id) {
-      const { error } = await supabase.from("clientes").update(datos).eq("id", id);
+      let { error } = await supabase.from("clientes").update(datos).eq("id", id);
+      if (faltaColumna(error)) {
+        quitarMunicipio();
+        ({ error } = await supabase.from("clientes").update(datos).eq("id", id));
+      }
       if (error) return { ok: false, mensaje: "No se pudo guardar: " + error.message };
       const errSync = await sincronizar(supabase, id);
       revalidatePath("/admin", "layout");
@@ -114,14 +123,18 @@ export async function guardarCliente(_prev: Resultado, f: FormData): Promise<Res
       if (errSync) return { ok: false, mensaje: "Datos guardados. " + errSync };
       return { ok: true, mensaje: "Cambios guardados." };
     }
-    const { data, error } = await supabase.from("clientes").insert(datos).select("id").single();
-    if (error) return { ok: false, mensaje: "No se pudo guardar: " + error.message };
+    let { data, error } = await supabase.from("clientes").insert(datos).select("id").single();
+    if (faltaColumna(error)) {
+      quitarMunicipio();
+      ({ data, error } = await supabase.from("clientes").insert(datos).select("id").single());
+    }
+    if (error || !data) return { ok: false, mensaje: "No se pudo guardar: " + (error?.message ?? "") };
     nuevoId = data.id;
 
     // Tienda en línea del cliente nuevo (opcional)
     const slug = texto(f, "slug", 40).toLowerCase();
     if (slug) {
-      const correo = texto(f, "correo_dueno", 120) || datos.correo;
+      const correo = texto(f, "correo_dueno", 120) || String(datos.correo);
       const clave = String(f.get("clave") ?? "");
       const { cliente, plan } = await clienteYPlan(supabase, data.id);
       const r = cliente ? await crearTienda(cliente, plan, slug, correo, clave) : { ok: false as const, mensaje: "" };
@@ -322,10 +335,16 @@ export async function guardarPlan(_prev: Resultado, f: FormData): Promise<Result
       color: ["azul", "naranja", "verde", "morado", "gris"].includes(color) ? color : "azul",
       orden: Math.trunc(Number(f.get("orden")) || 0),
       visible: f.get("visible") === "on",
+      con_publicidad: f.get("con_publicidad") === "on",
     };
-    const { error } = id
-      ? await supabase.from("planes").update(datos).eq("id", id)
-      : await supabase.from("planes").insert(datos);
+    const guardar = (d: Partial<typeof datos>) =>
+      id ? supabase.from("planes").update(d).eq("id", id) : supabase.from("planes").insert(d);
+    let { error } = await guardar(datos);
+    if (faltaColumna(error)) {
+      const { con_publicidad: _sinColumna, ...antes } = datos;
+      void _sinColumna;
+      ({ error } = await guardar(antes));
+    }
     if (error) {
       if (error.code === "23505") return { ok: false, mensaje: "Ya existe un plan con ese nombre." };
       return { ok: false, mensaje: "No se pudo guardar: " + error.message };
@@ -434,9 +453,18 @@ export async function guardarAjustes(_prev: Resultado, f: FormData): Promise<Res
     if (inst === null || Number.isNaN(inst) || inst < 0 || dom === null || Number.isNaN(dom) || dom < 0) {
       return { ok: false, mensaje: "Revisa los precios de instalación y dominio." };
     }
-    const { error } = await supabase
+    const cuotaMoto = numero(f, "cuota_mototaxi");
+    const cargaExtra = numero(f, "precio_carga_extra");
+    if ((cuotaMoto !== null && (Number.isNaN(cuotaMoto) || cuotaMoto < 0)) || (cargaExtra !== null && (Number.isNaN(cargaExtra) || cargaExtra < 0))) {
+      return { ok: false, mensaje: "Revisa la mensualidad de los mototaxistas y el precio de productos adicionales." };
+    }
+    const nuevos25: Record<string, number> = {};
+    if (cuotaMoto !== null) nuevos25.cuota_mototaxi = cuotaMoto;
+    if (cargaExtra !== null) nuevos25.precio_carga_extra = cargaExtra;
+    const guardar = (extra: Record<string, number>) => supabase
       .from("ajustes_negocio")
       .update({
+        ...extra,
         nombre_negocio: nombre,
         eslogan: texto(f, "eslogan", 80),
         codigo_pais: cel.codigo,
@@ -452,6 +480,8 @@ export async function guardarAjustes(_prev: Resultado, f: FormData): Promise<Res
         actualizado_en: new Date().toISOString(),
       })
       .eq("id", 1);
+    let { error } = await guardar(nuevos25);
+    if (faltaColumna(error)) ({ error } = await guardar({}));
     if (error) return { ok: false, mensaje: "No se pudo guardar: " + error.message };
     revalidatePath("/", "layout");
     refrescarCache();

@@ -258,6 +258,8 @@ export async function guardarConfiguracion(tiendaId: number, _prev: Resultado, f
       cambios.logo_path = null;
     }
 
+    // "Ofrecer mototaxi" (2.5): solo si el formulario lo trae
+    if (formData.get("campo_mototaxi")) cambios.ofrece_mototaxi = formData.get("ofrece_mototaxi") === "on";
     const { error } = await supabase.from("tiendas").update(cambios).eq("id", tiendaId);
     if (error) return { ok: false, mensaje: "No se pudo guardar: " + error.message };
     if ((archivo || quitarLogo) && actual?.logo_path) await supabase.storage.from(BUCKET).remove([actual.logo_path]);
