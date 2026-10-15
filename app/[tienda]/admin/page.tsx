@@ -23,6 +23,9 @@ import { obtenerAdminTienda } from "@/lib/supabase/server";
 import { POR_PAGINA_PANEL, aTienda, obtenerBase, obtenerFilaTienda, obtenerPanelProductos } from "@/lib/tienda/datos";
 import { supabaseConfigurado } from "@/lib/config";
 
+// Página privada: no debe salir en Google
+export const metadata = { robots: { index: false, follow: false } };
+
 export const dynamic = "force-dynamic";
 
 const SECCIONES = [

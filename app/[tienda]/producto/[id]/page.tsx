@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ImagenProducto from "@/components/tienda/ImagenProducto";
@@ -6,10 +7,41 @@ import NoDisponible from "@/components/tienda/NoDisponible";
 import { obtenerBase, obtenerProductoPublico as obtenerProducto, obtenerTiendaPublica as obtenerTienda } from "@/lib/tienda/datos";
 import { enlaceWhatsApp, mensajeCotizacion } from "@/lib/whatsapp";
 import { lempiras } from "@/lib/precio";
+import { resumen, urlTienda } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
-export default async function PaginaProducto({ params }: { params: Promise<{ tienda: string; id: string }> }) {
+type Props = { params: Promise<{ tienda: string; id: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { tienda: slug, id } = await params;
+  const tienda = await obtenerTienda(slug);
+  const num = Number(id);
+  if (!tienda || !Number.isInteger(num)) return {};
+  const { producto } = await obtenerProducto(tienda.id, num);
+  if (!producto) return {};
+  const precio = producto.precio != null ? ` Precio: ${lempiras(producto.precio)}.` : "";
+  const descripcion = resumen(
+    `${producto.descripcion || producto.nombre}.${precio} Pídelo por WhatsApp a ${tienda.nombre}.`.replace(/\.\./g, "."),
+  );
+  const url = urlTienda(tienda, `/producto/${producto.id}`);
+  return {
+    title: `${producto.nombre} | ${tienda.nombre}`,
+    description: descripcion,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "website",
+      locale: "es_HN",
+      siteName: tienda.nombre,
+      title: producto.nombre,
+      description: descripcion,
+      url,
+      images: producto.imagen_url ? [{ url: producto.imagen_url, alt: producto.nombre }] : undefined,
+    },
+  };
+}
+
+export default async function PaginaProducto({ params }: Props) {
   const { tienda: slug, id } = await params;
   const num = Number(id);
   if (!Number.isInteger(num)) notFound();

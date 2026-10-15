@@ -1,36 +1,27 @@
-
 import type { Metadata } from "next";
 import "./globals.css";
 import { obtenerAjustes } from "@/lib/panel/datos";
+import { SITIO } from "@/lib/seo";
 
 export async function generateMetadata(): Promise<Metadata> {
   const a = await obtenerAjustes();
-
   return {
-    metadataBase: new URL("https://www.tunegocioenlineahn.com"),
-    title:
-      "Catálogo Digital para Negocios en Honduras | Tu Negocio en Línea HN",
+    // Con esto todas las direcciones relativas (canónica, imágenes) salen con https://www…
+    metadataBase: new URL(SITIO),
+    title: `Catálogo digital para negocios en Honduras | ${a.nombre_negocio}`,
     description:
-      "Crea tu catálogo digital con tus productos, logo y colores. Recibe solicitudes de pedidos por WhatsApp y ofrece una app Android para tu negocio. Solicita una demostración en Honduras.",
+      "Crea el catálogo digital de tu negocio en Honduras: tus productos con fotos, tus colores y tu logo, pedidos por WhatsApp, panel de administración y app Android.",
     icons: { icon: "/icono.svg" },
     openGraph: {
       type: "website",
       locale: "es_HN",
-      siteName: a.nombre_negocio || "Tu Negocio en Línea HN",
-      title:
-        "Catálogo Digital para Negocios en Honduras | Tu Negocio en Línea HN",
-      description:
-        "Muestra tus productos en un catálogo digital personalizado y recibe solicitudes por WhatsApp. Una solución para negocios en Honduras.",
-      url: "https://www.tunegocioenlineahn.com/",
+      siteName: a.nombre_negocio,
+      images: [{ url: "/capturas/tienda.webp", alt: `Tienda en línea hecha con ${a.nombre_negocio}` }],
     },
   };
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
       <body className="min-h-screen">{children}</body>

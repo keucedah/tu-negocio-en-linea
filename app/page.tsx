@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import FormularioDemo from "@/components/panel/FormularioDemo";
 import Celular from "@/components/panel/Celular";
@@ -13,8 +14,12 @@ import { obtenerAjustes, obtenerPlanesPublicos as obtenerPlanes, obtenerTipos } 
 import { COLOR_PLAN } from "@/lib/panel/colores";
 import { lempiras } from "@/lib/negocio";
 import { formatearCelular, numeroWhatsApp } from "@/lib/telefono";
+import { SITIO } from "@/lib/seo";
 
 export const revalidate = 60;
+
+// La página principal es la dirección oficial con www (las demás variantes apuntan aquí)
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 const FUNCIONES = [
   { icono: IcoCaja, titulo: "Catálogo de productos", texto: "Tus productos con foto, descripción y búsqueda por nombre." },
@@ -56,8 +61,21 @@ export default async function Inicio() {
   // Con tres planes o más se resalta el del medio como recomendado
   const recomendado = visibles.length >= 3 ? visibles[Math.floor((visibles.length - 1) / 2)].id : null;
 
+  // Datos para Google: quién es el negocio y cómo contactarlo
+  const datosGoogle = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: ajustes.nombre_negocio,
+    url: SITIO + "/",
+    logo: SITIO + "/icono.svg",
+    description: "Catálogos digitales con pedidos por WhatsApp y app Android para negocios en Honduras.",
+    areaServed: "HN",
+    ...(whatsapp && { contactPoint: { "@type": "ContactPoint", telephone: "+" + whatsapp, contactType: "sales", availableLanguage: "es" } }),
+  };
+
   return (
     <div className="bg-white">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(datosGoogle).replace(/</g, "\\u003c") }} />
       {/* Encabezado */}
       <header className="sticky top-0 z-30 border-b border-marino-800 bg-marino-900/95 text-white backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
@@ -87,7 +105,8 @@ export default async function Inicio() {
               Catálogo web + App Android + Panel de tu tienda
             </p>
             <p className="mt-5 text-lg text-gray-200">
-              Muestra tus productos con tus colores, tu logo y tu banner. Tus clientes eligen y te mandan el pedido por WhatsApp.
+              El catálogo digital para negocios en Honduras: muestra tus productos con tus colores, tu logo y tu banner. Tus clientes
+              eligen y te mandan el pedido por WhatsApp.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <a href={enlaceDemo} target="_blank" rel="noopener noreferrer" className="boton-whatsapp px-5 py-3 text-base">

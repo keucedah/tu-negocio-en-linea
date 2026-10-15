@@ -6,6 +6,9 @@ import { obtenerAdminTienda } from "@/lib/supabase/server";
 import { obtenerBase, obtenerCategorias, obtenerFilaTienda, obtenerProducto } from "@/lib/tienda/datos";
 import { supabaseConfigurado } from "@/lib/config";
 
+// Página privada: no debe salir en Google
+export const metadata = { robots: { index: false, follow: false } };
+
 export const dynamic = "force-dynamic";
 
 export default async function EditarProducto({ params }: { params: Promise<{ tienda: string; id: string }> }) {
