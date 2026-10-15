@@ -42,6 +42,8 @@ export type FilaTienda = {
   id: number;
   slug: string;
   nombre_tienda: string;
+  /** Dominio propio de la tienda (ana.com), si tiene. */
+  dominio?: string | null;
   logo_url: string | null;
   logo_path: string | null;
   codigo_pais: string;
@@ -87,4 +89,6 @@ export type Tienda = {
   /** Banners del carrusel de la portada (hasta 3): imagen de computadora (4:1) y, si tiene, la de celular (2:1). */
   banners: BannerTienda[];
   colorPortada: string;
+  /** Dominio propio (ana.com) o vacío. Sirve para la dirección oficial (canónica) en Google. */
+  dominio: string;
 };

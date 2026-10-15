@@ -16,7 +16,7 @@ export { leerFiltros } from "./filtros";
 const COLUMNAS_PRODUCTO =
   "id, nombre, descripcion, categoria_id, imagen_url, imagen_path, imagen_mini_url, precio, tallas, destacado, orden_destacado, creado_en";
 const COLUMNAS_BASE =
-  "id, slug, nombre_tienda, logo_url, logo_path, codigo_pais, celular, activa, tipo_negocio_id, tipo_negocio_otro, " +
+  "id, slug, nombre_tienda, dominio, logo_url, logo_path, codigo_pais, celular, activa, tipo_negocio_id, tipo_negocio_otro, " +
   "color_principal, color_encabezado, titulo_portada, texto_portada, texto_buscador, banner_url, banner_path, " +
   "tipo:tipos_negocio(nombre, titulo_portada, texto_portada, texto_buscador)";
 const COLUMNAS_24 = COLUMNAS_BASE + ", banners_url, banners_path, color_portada";
@@ -101,6 +101,7 @@ export function aTienda(t: FilaTienda): Tienda {
     textoBuscador: t.texto_buscador || t.tipo?.texto_buscador || PORTADA.buscador,
     bannerUrl: t.banner_url,
     colorPortada: t.color_portada ?? "",
+    dominio: t.dominio ?? "",
     banners: (t.banners_url?.length ? t.banners_url.slice(0, 3) : t.banner_url ? [t.banner_url] : []).map((pc, i) => ({
       pc,
       movil: t.banners_movil_url?.[i] ?? "",
