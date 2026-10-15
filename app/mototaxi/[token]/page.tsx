@@ -46,7 +46,7 @@ export default async function PaginaMototaxista({ params }: { params: Promise<{ 
   else if (vencido)
     estado = {
       titulo: "Suspendido",
-      texto: m.pagado_hasta ? `Tu mensualidad venció el ${fechaCorta(m.pagado_hasta)}. Sales en gris en las tiendas y los clientes no te pueden elegir.` : "Todavía no tenemos tu primer pago. Sales en gris en las tiendas y los clientes no te pueden elegir.",
+      texto: m.pagado_hasta ? `Tu mensualidad venció el ${fechaCorta(m.pagado_hasta)}. Ya no sales en las tiendas hasta que pagues.` : "Todavía no tenemos tu primer pago. Ya no sales en las tiendas hasta que pagues.",
       clase: "bg-red-100 text-red-900",
     };
   else if (porVencer)
@@ -94,6 +94,9 @@ export default async function PaginaMototaxista({ params }: { params: Promise<{ 
             </a>
           )}
         </section>
+        <p className="text-center text-sm text-gray-600">
+          ¿Tienes la App del mototaxista? Copia el enlace de esta página y pégalo en la App para entrar. Ahí te pones <b>Disponible</b> u <b>Ocupado</b>.
+        </p>
         <p className="text-center text-xs text-gray-500">Este enlace es solo tuyo. No lo compartas.</p>
       </main>
     </div>

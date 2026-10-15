@@ -2,7 +2,7 @@ import Link from "next/link";
 import ListaMototaxistas from "@/components/panel/ListaMototaxistas";
 import GestionMunicipios from "@/components/panel/GestionMunicipios";
 import { obtenerAjustes, obtenerClientes } from "@/lib/panel/datos";
-import { CLASE_ESTADO_MOTO, cuotaMototaxi, estadoMototaxi, mensajeCobroMototaxi, obtenerMototaxistas } from "@/lib/panel/mototaxis";
+import { CLASE_ESTADO_MOTO, cuotaMototaxi, estadoMototaxi, textoOcupado, mensajeCobroMototaxi, obtenerMototaxistas } from "@/lib/panel/mototaxis";
 import { nombreMunicipio, obtenerUbicaciones } from "@/lib/panel/ubicaciones";
 import { enlaceWhatsApp, fechaCorta, lempiras } from "@/lib/negocio";
 import { formatearCelular } from "@/lib/telefono";
@@ -43,6 +43,7 @@ export default async function Mototaxistas() {
       cuota: lempiras(cuotaMototaxi(m, ajustes)),
       elegido: m.veces_elegido,
       sinPermiso: !m.acepto_publicar,
+      ocupado: textoOcupado(m),
       enlaceCobro: enlaceWhatsApp(m.codigo_pais, m.celular, mensajeCobroMototaxi(m, ajustes, `${sitio}/mototaxi/${m.token}`)),
     };
   });
@@ -57,8 +58,9 @@ export default async function Mototaxistas() {
 
   const cuenta = (p: (e: string) => boolean) => filas.filter((f) => p(f.estado)).length;
   const visibles = filas.filter((f) => (f.estado === "al_dia" || f.estado === "por_vencer") && !f.sinPermiso).length;
+  const ocupados = filas.filter((f) => (f.estado === "al_dia" || f.estado === "por_vencer") && !f.sinPermiso && f.ocupado).length;
   const tarjetas = [
-    { titulo: "Visibles en tiendas", valor: visibles, clase: "text-green-700", nota: "Al día y con permiso" },
+    { titulo: "Visibles en tiendas", valor: visibles, clase: "text-green-700", nota: `Al día y con permiso${ocupados ? ` · ${ocupados} ocupado${ocupados === 1 ? "" : "s"} ahora` : ""}` },
     { titulo: "Por vencer", valor: cuenta((e) => e === "por_vencer"), clase: "text-yellow-600", nota: `Próximos ${ajustes.dias_aviso} días` },
     { titulo: "Suspendidos", valor: cuenta((e) => e === "vencido" || e === "sin_pagos"), clase: "text-red-600", nota: "Vencidos o sin pagos" },
     { titulo: "Mensualidad", valor: lempiras(ajustes.cuota_mototaxi), nota: "Se cambia en Ajustes" },
@@ -79,7 +81,7 @@ export default async function Mototaxistas() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Mototaxistas</h1>
-          <p className="text-sm text-gray-600">Salen en el carrito de las tiendas de su municipio. Si su mensualidad vence, aparecen en gris como “Suspendido” hasta que paguen.</p>
+          <p className="text-sm text-gray-600">Salen en el carrito de las tiendas de su municipio. Si su mensualidad vence, dejan de salir hasta que paguen. Cuando se ponen “Ocupado” en su App, salen en gris y no se pueden elegir.</p>
         </div>
         <Link href="/admin/mototaxistas/nuevo" className="boton-primario">+ Agregar mototaxista</Link>
       </div>

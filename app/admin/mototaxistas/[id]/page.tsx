@@ -11,6 +11,7 @@ import { eliminarMototaxista, eliminarPagoMototaxi, nuevoEnlaceMototaxista, regi
 import { obtenerAjustes } from "@/lib/panel/datos";
 import {
   CLASE_ESTADO_MOTO, cuotaMototaxi, datosReciboMototaxi, estadoMototaxi, mensajeCobroMototaxi, numeroReciboMototaxi, obtenerMototaxista, obtenerPagosMototaxi,
+  textoOcupado,
 } from "@/lib/panel/mototaxis";
 import { nombreMunicipio, obtenerUbicaciones } from "@/lib/panel/ubicaciones";
 import { enlaceWhatsApp, fechaCorta, hoy, lempiras, sumarMeses } from "@/lib/negocio";
@@ -76,7 +77,7 @@ export default async function FichaMototaxista({ params, searchParams }: { param
             <dl className="grid grid-cols-2 gap-3 text-sm">
               <div><dt className="text-gray-500">Cuota mensual</dt><dd className="text-xl font-black">{lempiras(cuota)}{m.cuota_personalizada != null && <span className="ml-1 text-xs font-normal text-gray-500">(especial)</span>}</dd></div>
               <div><dt className="text-gray-500">Pagado hasta</dt><dd className="font-semibold">{fechaCorta(m.pagado_hasta)}</dd></div>
-              <div><dt className="text-gray-500">En las tiendas</dt><dd className="font-semibold">{!m.activo ? "No sale (dado de baja)" : !m.acepto_publicar ? "No sale (falta permiso)" : e.suspendido ? "Sale en gris, suspendido" : "Sale y se puede elegir"}</dd></div>
+              <div><dt className="text-gray-500">En las tiendas</dt><dd className="font-semibold">{!m.activo ? "No sale (dado de baja)" : !m.acepto_publicar ? "No sale (falta permiso)" : e.suspendido ? "No sale (suspendido)" : textoOcupado(m) ? `Sale en gris: ${textoOcupado(m).toLowerCase()}` : "Sale y se puede elegir"}</dd></div>
               <div><dt className="text-gray-500">Total pagado</dt><dd className="font-semibold">{lempiras(pagos.reduce((s, p) => s + p.monto, 0))}</dd></div>
             </dl>
           </section>
