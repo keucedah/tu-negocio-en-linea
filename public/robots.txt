@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://tunegocioenlineahn.com/sitemap.xml
+Sitemap: https://www.tunegocioenlineahn.com/sitemap.xml
