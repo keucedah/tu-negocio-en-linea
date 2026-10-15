@@ -3,10 +3,11 @@
 import { useState } from "react";
 import Formulario from "./Formulario";
 import CamposTienda from "./CamposTienda";
+import SelectorMunicipio from "./SelectorMunicipio";
 import { guardarCliente } from "@/app/admin/acciones";
 import { PAISES } from "@/lib/telefono";
 import { lempiras } from "@/lib/negocio";
-import type { Cliente, Plan, TipoNegocio } from "@/lib/panel/types";
+import type { Cliente, Plan, TipoNegocio, Ubicaciones } from "@/lib/panel/types";
 
 export default function FormularioCliente({
   cliente,
@@ -16,8 +17,11 @@ export default function FormularioCliente({
   hoy,
   proximoSugerido,
   tienda,
+  ubicaciones,
 }: {
   cliente?: Partial<Cliente>;
+  /** Departamentos y municipios (2.5). */
+  ubicaciones?: Ubicaciones;
   planes: Plan[];
   tipos: TipoNegocio[];
   precioDominio: number;
@@ -89,8 +93,9 @@ export default function FormularioCliente({
           <input name="correo" type="email" maxLength={120} value={correo} onChange={(e) => setCorreo(e.target.value)} className="campo" />
         </label>
         <label className="block">
-          <span className="etiqueta">Dirección / ciudad</span>
-          <input name="direccion" maxLength={200} defaultValue={cliente?.direccion} className="campo" />
+          <span className="etiqueta">Dirección de la tienda</span>
+          <input name="direccion" maxLength={200} defaultValue={cliente?.direccion} className="campo" placeholder="Barrio El Centro, frente al parque" />
+          <span className="mt-1 block text-xs text-gray-500">Sale en el mensaje que recibe el mototaxista.</span>
         </label>
         <label className="block">
           <span className="etiqueta">Dominio propio</span>
@@ -98,6 +103,14 @@ export default function FormularioCliente({
           <span className="mt-1 block text-xs text-gray-500">Se activa en su tienda solo si marcas “Incluye dominio web”.</span>
         </label>
       </div>
+      {ubicaciones && (
+        <SelectorMunicipio
+          ubicaciones={ubicaciones}
+          valor={cliente?.municipio_id}
+          etiqueta="Municipio de la tienda"
+          ayuda="En su tienda salen los mototaxistas de este municipio."
+        />
+      )}
       {cliente?.tienda_id || tienda ? (
         <input type="hidden" name="sitio_url" value={cliente?.sitio_url ?? ""} />
       ) : (

@@ -94,6 +94,29 @@ export default function FormularioTienda({ config, accion }: Props) {
         </p>
       </div>
 
+      {config.ofrece_mototaxi !== undefined && (
+        <div className="space-y-2 rounded-xl border p-3">
+          <input type="hidden" name="campo_mototaxi" value="1" />
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" name="ofrece_mototaxi" defaultChecked={config.ofrece_mototaxi} className="mt-0.5 h-4 w-4" />
+            <span>
+              <span className="font-medium">Ofrecer “Enviar con mototaxi” en el carrito</span>
+              <span className="block text-xs text-gray-500">
+                El cliente elige un mototaxista de tu municipio, que viene a tu tienda por el pedido y se lo lleva.
+              </span>
+            </span>
+          </label>
+          <p className="text-xs text-gray-600">
+            <b>Dirección de tu tienda:</b> {config.direccion || "sin dirección"}
+            {config.municipio?.nombre && ` · ${config.municipio.nombre}`}
+            <span className="block text-gray-500">Sale en el mensaje al mototaxista. Para cambiarla, pídesela a tu proveedor.</span>
+          </p>
+          {!config.municipio_id && (
+            <p className="rounded-lg bg-amber-50 px-2 py-1 text-xs text-amber-900">Tu tienda aún no tiene municipio: pídeselo a tu proveedor para que salgan los mototaxistas.</p>
+          )}
+        </div>
+      )}
+
       {resultado && (
         <p className={`rounded-lg px-3 py-2 text-sm ${resultado.ok ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
           {resultado.mensaje}

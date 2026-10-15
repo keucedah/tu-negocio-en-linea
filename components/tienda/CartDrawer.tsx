@@ -5,11 +5,29 @@ import { useCarrito } from "./CartProvider";
 import ImagenProducto from "./ImagenProducto";
 import { enlaceWhatsApp, mensajeCotizacion, totalPedido } from "@/lib/whatsapp";
 import { lempiras } from "@/lib/precio";
+import PedidoMototaxi, { type TiendaPedido } from "./PedidoMototaxi";
+import type { MototaxiPublico } from "@/lib/mototaxis";
 
-export default function CartDrawer({ whatsapp }: { whatsapp: string }) {
+export default function CartDrawer({
+  whatsapp,
+  tienda,
+  mototaxis = [],
+}: {
+  whatsapp: string;
+  /** Datos de la tienda para el pedido con mototaxi (2.5). */
+  tienda?: TiendaPedido;
+  mototaxis?: MototaxiPublico[];
+}) {
   const { items, abierto, cerrar, cambiarCantidad, quitar, vaciar, totalUnidades } = useCarrito();
   const [nombre, setNombre] = useState("");
   const [nota, setNota] = useState("");
+  // Cada vez que se abre la lista de mototaxistas sale en otro orden
+  const [conMototaxi, setConMototaxi] = useState(0);
+  const hayMototaxis = Boolean(tienda) && mototaxis.length > 0;
+
+  useEffect(() => {
+    if (!abierto || items.length === 0) setConMototaxi(0);
+  }, [abierto, items.length]);
 
   useEffect(() => {
     if (!abierto) return;
@@ -106,6 +124,7 @@ export default function CartDrawer({ whatsapp }: { whatsapp: string }) {
               )}
               <input
                 className="campo"
+                aria-label="Tu nombre"
                 placeholder="Tu nombre (opcional)"
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
@@ -121,8 +140,17 @@ export default function CartDrawer({ whatsapp }: { whatsapp: string }) {
                 <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden>
                   <path d="M17.47 14.38c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.64.07-.3-.15-1.25-.46-2.38-1.47-.88-.79-1.47-1.76-1.65-2.06-.17-.3-.02-.46.13-.6.13-.14.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.03-.52-.07-.15-.67-1.6-.92-2.2-.24-.58-.49-.5-.67-.5h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.21 3.08c.15.2 2.1 3.2 5.08 4.48.71.31 1.26.49 1.7.63.71.23 1.36.2 1.87.12.57-.09 1.75-.72 2-1.41.24-.7.24-1.29.17-1.41-.07-.13-.27-.2-.57-.35M12.05 21.5h-.01a9.5 9.5 0 0 1-4.84-1.32l-.35-.21-3.6.94.96-3.5-.23-.36a9.46 9.46 0 0 1-1.45-5.05c0-5.24 4.27-9.5 9.52-9.5a9.46 9.46 0 0 1 6.73 2.79 9.43 9.43 0 0 1 2.78 6.72c0 5.24-4.27 9.5-9.51 9.5M20.13 3.88A11.36 11.36 0 0 0 12.05.5C5.76.5.64 5.62.64 11.9c0 2.01.52 3.97 1.52 5.7L.54 23.5l6.05-1.59a11.4 11.4 0 0 0 5.45 1.39h.01c6.29 0 11.41-5.12 11.41-11.4 0-3.05-1.19-5.91-3.34-8.07" />
                 </svg>
-                Enviar pedido por WhatsApp
+                {hayMototaxis ? "Enviar pedido a la tienda" : "Enviar pedido por WhatsApp"}
               </button>
+              {hayMototaxis && (
+                <button
+                  type="button"
+                  onClick={() => setConMototaxi((n) => n + 1)}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-gray-900 bg-white py-3 text-base font-bold text-gray-900 hover:bg-gray-100"
+                >
+                  <span aria-hidden>🛺</span> Enviar con mototaxi
+                </button>
+              )}
               {!whatsapp && (
                 <p className="text-center text-xs text-red-600">La tienda aún no configuró su número de WhatsApp.</p>
               )}
@@ -131,6 +159,18 @@ export default function CartDrawer({ whatsapp }: { whatsapp: string }) {
               </button>
             </div>
           </>
+        )}
+        {conMototaxi > 0 && tienda && items.length > 0 && (
+          <PedidoMototaxi
+            key={conMototaxi}
+            items={items}
+            mototaxis={mototaxis}
+            tienda={tienda}
+            nombreInicial={nombre}
+            notaInicial={nota}
+            alCerrar={() => setConMototaxi(0)}
+            alVaciar={vaciar}
+          />
         )}
       </aside>
     </div>

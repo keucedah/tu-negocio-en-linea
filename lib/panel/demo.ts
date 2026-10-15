@@ -5,9 +5,9 @@ import type { Ajustes, Cliente, Pago, Plan, Solicitud, TipoNegocio } from "./typ
 const caracteristicas = "Imágenes optimizadas en WebP\nAlmacenamiento en la nube (Supabase)\nCatálogo y panel administrativo";
 
 export const planesDemo: Plan[] = [
-  { id: 1, nombre: "Básico", subtitulo: "Para negocios pequeños", precio_mensual: 250, limite_productos: 2000, caracteristicas, color: "azul", orden: 1, visible: true },
-  { id: 2, nombre: "Pro", subtitulo: "Negocios en crecimiento", precio_mensual: 500, limite_productos: 10000, caracteristicas, color: "naranja", orden: 2, visible: true },
-  { id: 3, nombre: "Pro Plus", subtitulo: "Alto volumen", precio_mensual: 800, limite_productos: 50000, caracteristicas, color: "verde", orden: 3, visible: true },
+  { id: 1, nombre: "Básico", subtitulo: "Para negocios pequeños", precio_mensual: 250, limite_productos: 2000, caracteristicas, color: "azul", orden: 1, visible: true, con_publicidad: true },
+  { id: 2, nombre: "Pro", subtitulo: "Negocios en crecimiento", precio_mensual: 500, limite_productos: 10000, caracteristicas, color: "naranja", orden: 2, visible: true, con_publicidad: true },
+  { id: 3, nombre: "Pro Plus", subtitulo: "Alto volumen", precio_mensual: 800, limite_productos: 50000, caracteristicas, color: "verde", orden: 3, visible: true, con_publicidad: false },
 ];
 
 export const ajustesDemo: Ajustes = {
@@ -20,6 +20,8 @@ export const ajustesDemo: Ajustes = {
   precio_instalacion: 2500,
   precio_dominio: 135,
   dias_aviso: 5,
+  cuota_mototaxi: 50,
+  precio_carga_extra: 150,
   plantilla_cobro:
     "Hola {contacto}, le saluda {mi_negocio}.\nLe recordamos que el pago mensual de su tienda en línea ({negocio}) por *{monto}* ({plan}) vence el *{fecha}*.\nPuede pagar por transferencia o en efectivo. Al pagar, envíenos el comprobante por aquí. ¡Gracias por su preferencia!",
   plantilla_vencido:
@@ -53,6 +55,7 @@ function cliente(id: number, c: Partial<Cliente> & Pick<Cliente, "negocio">): Cl
     tipo_negocio_id: 1,
     tipo_negocio_otro: "",
     tienda_id: null,
+    municipio_id: null,
     creado_en: sumarMeses(h, -4) + "T12:00:00Z",
     ...c,
   };

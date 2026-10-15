@@ -10,6 +10,8 @@ export type Plan = {
   color: ColorPlan;
   orden: number;
   visible: boolean;
+  /** Las tiendas con este plan muestran publicidad de otras tiendas (2.5). */
+  con_publicidad: boolean;
 };
 
 export type Ajustes = {
@@ -25,6 +27,10 @@ export type Ajustes = {
   plantilla_cobro: string;
   plantilla_vencido: string;
   plantilla_recibo: string;
+  /** Mensualidad de cada mototaxista (2.5). */
+  cuota_mototaxi: number;
+  /** Precio por cada 50 productos adicionales que se cargan en la instalación (2.5). */
+  precio_carga_extra: number;
 };
 
 export type EstadoCliente = "prueba" | "activo" | "suspendido" | "cancelado";
@@ -51,6 +57,8 @@ export type Cliente = {
   tipo_negocio_id: number | null;
   tipo_negocio_otro: string;
   tienda_id: number | null;
+  /** Municipio de su tienda (2.5): ahí salen sus mototaxistas. */
+  municipio_id: number | null;
   creado_en: string;
 };
 
@@ -133,5 +141,73 @@ export type Anuncio = {
   inicia: string | null;
   termina: string | null;
   orden: number;
+  creado_en: string;
+};
+
+export type Departamento = { id: number; nombre: string };
+export type Municipio = { id: number; departamento_id: number; nombre: string };
+export type Ubicaciones = { departamentos: Departamento[]; municipios: Municipio[] };
+
+/** Mototaxista registrado por el administrador (2.5). La identidad nunca sale en las tiendas. */
+export type Mototaxista = {
+  id: number;
+  codigo: string;
+  nombre: string;
+  codigo_pais: string;
+  celular: string;
+  identidad: string;
+  direccion: string;
+  numero_mototaxi: string;
+  foto_url: string | null;
+  foto_path: string | null;
+  foto_moto_url: string | null;
+  foto_moto_path: string | null;
+  municipio_id: number | null;
+  municipios_extra: number[];
+  acepto_publicar: boolean;
+  acepto_fecha: string | null;
+  cuota_personalizada: number | null;
+  /** Hasta qué día está pagado. Vencido (o sin pagos) = suspendido en las tiendas. */
+  pagado_hasta: string | null;
+  /** false = dado de baja: no sale en ningún lado. */
+  activo: boolean;
+  notas: string;
+  token: string;
+  veces_elegido: number;
+  creado_en: string;
+};
+
+export type PagoMototaxi = {
+  id: number;
+  mototaxista_id: number;
+  fecha: string;
+  monto: number;
+  meses: number;
+  metodo: string;
+  nota: string;
+  pagado_hasta: string;
+  numero_recibo: number;
+};
+
+/** Publicidad pagada de una tienda (u otro negocio) en tiendas de otro tipo de negocio (2.5). */
+export type Publicidad = {
+  id: number;
+  anunciante_tienda_id: number | null;
+  anunciante_nombre: string;
+  tipo_negocio_id: number | null;
+  tipo_negocio_otro: string;
+  titulo: string;
+  texto: string;
+  imagen_url: string;
+  imagen_path: string;
+  enlace_url: string;
+  boton_texto: string;
+  municipio_id: number | null;
+  precio: number | null;
+  activo: boolean;
+  inicia: string | null;
+  termina: string | null;
+  vistas: number;
+  clics: number;
   creado_en: string;
 };

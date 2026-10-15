@@ -6,7 +6,9 @@ import { usePathname } from "next/navigation";
 const ENLACES = [
   { href: "/admin", texto: "Clientes" },
   { href: "/admin/pagos", texto: "Pagos" },
+  { href: "/admin/mototaxistas", texto: "Mototaxistas" },
   { href: "/admin/anuncios", texto: "Anuncios" },
+  { href: "/admin/publicidad", texto: "Publicidad" },
   { href: "/admin/planes", texto: "Planes" },
   { href: "/admin/tipos", texto: "Tipos de negocio" },
   { href: "/admin/solicitudes", texto: "Solicitudes" },

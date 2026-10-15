@@ -20,15 +20,17 @@ const COLUMNAS_BASE =
   "color_principal, color_encabezado, titulo_portada, texto_portada, texto_buscador, banner_url, banner_path, " +
   "tipo:tipos_negocio(nombre, titulo_portada, texto_portada, texto_buscador)";
 const COLUMNAS_24 = COLUMNAS_BASE + ", banners_url, banners_path, color_portada";
-const COLUMNAS_TIENDA = COLUMNAS_24 + ", banners_movil_url, banners_movil_path";
+const COLUMNAS_241 = COLUMNAS_24 + ", banners_movil_url, banners_movil_path";
+const COLUMNAS_TIENDA = COLUMNAS_241 + ", direccion, municipio_id, ofrece_mototaxi, municipio:municipios(nombre)";
 
 type Consulta = ReturnType<typeof crearClientePublico>;
 
-/** Lee la fila de la tienda. Si todavía no se ejecutó el SQL de la 2.4.1 o de la 2.4, lee sin esas columnas. */
+/** Lee la fila de la tienda. Si todavía no se ejecutó el SQL de la 2.5, 2.4.1 o 2.4, lee sin esas columnas. */
 async function leerFila(supabase: Consulta, slug: string): Promise<FilaTienda | null> {
-  for (const columnas of [COLUMNAS_TIENDA, COLUMNAS_24, COLUMNAS_BASE]) {
+  for (const columnas of [COLUMNAS_TIENDA, COLUMNAS_241, COLUMNAS_24, COLUMNAS_BASE]) {
     const r = await supabase.from("tiendas").select(columnas).eq("slug", slug).maybeSingle<FilaTienda>();
-    if (r.error?.code === "42703") continue; // Falta una columna nueva: prueba sin ella
+    // Falta una columna o tabla nueva: prueba sin ella
+    if (r.error?.code === "42703" || r.error?.code === "PGRST200" || r.error?.code === "42P01") continue;
     if (r.error) throw r.error;
     return r.data;
   }
@@ -102,6 +104,10 @@ export function aTienda(t: FilaTienda): Tienda {
     bannerUrl: t.banner_url,
     colorPortada: t.color_portada ?? "",
     dominio: t.dominio ?? "",
+    direccion: t.direccion ?? "",
+    municipio: t.municipio?.nombre ?? "",
+    municipioId: t.municipio_id ?? null,
+    ofreceMototaxi: t.ofrece_mototaxi ?? false,
     banners: (t.banners_url?.length ? t.banners_url.slice(0, 3) : t.banner_url ? [t.banner_url] : []).map((pc, i) => ({
       pc,
       movil: t.banners_movil_url?.[i] ?? "",

@@ -9,15 +9,40 @@ import type { Ajustes, Anuncio, Cliente, Pago, Plan, Solicitud, TipoNegocio } fr
 
 const COLUMNAS_AJUSTES =
   "nombre_negocio, eslogan, codigo_pais, celular, correo, direccion, precio_instalacion, precio_dominio, dias_aviso, plantilla_cobro, plantilla_vencido, plantilla_recibo";
+const COLUMNAS_AJUSTES_25 = COLUMNAS_AJUSTES + ", cuota_mototaxi, precio_carga_extra";
+
+/**
+ * Hace la consulta con las columnas nuevas y, si todavía no se ejecutó el SQL de esa versión
+ * (columna inexistente, código 42703), la repite con las de antes. Así el sitio no se cae.
+ */
+export async function conRespaldo<T>(
+  consultar: (columnas: string) => PromiseLike<{ data: unknown; error: { code?: string } | null }>,
+  columnas: string[],
+): Promise<{ data: T | null; error: { code?: string } | null }> {
+  let r: { data: unknown; error: { code?: string } | null } = { data: null, error: null };
+  for (const c of columnas) {
+    r = await consultar(c);
+    if (r.error?.code !== "42703") break;
+  }
+  return { data: (r.data as T | null) ?? null, error: r.error };
+}
 
 // Postgres devuelve numeric como texto: se convierte a número.
-const aPlan = (p: Plan): Plan => ({ ...p, precio_mensual: Number(p.precio_mensual) });
+const aPlan = (p: Plan): Plan => ({ ...p, precio_mensual: Number(p.precio_mensual), con_publicidad: p.con_publicidad !== false });
+const COLUMNAS_PLAN = "id, nombre, subtitulo, precio_mensual, limite_productos, caracteristicas, color, orden, visible";
+const COLUMNAS_PLAN_25 = COLUMNAS_PLAN + ", con_publicidad";
 
 // Ajustes, planes visibles y tipos de negocio son públicos: se leen sin sesión y se guardan en caché.
 const opcionesCache = { tags: [TAG_PLATAFORMA], revalidate: SEGUNDOS_CACHE };
 
 const ajustesPublicos = unstable_cache(
-  async () => (await crearClientePublico().from("ajustes_negocio").select(COLUMNAS_AJUSTES).eq("id", 1).maybeSingle()).data,
+  async () =>
+    (
+      await conRespaldo<Record<string, unknown>>(
+        (c) => crearClientePublico().from("ajustes_negocio").select(c).eq("id", 1).maybeSingle(),
+        [COLUMNAS_AJUSTES_25, COLUMNAS_AJUSTES],
+      )
+    ).data,
   ["ajustes"],
   opcionesCache,
 );
@@ -26,19 +51,23 @@ export const obtenerAjustes = cache(async (): Promise<Ajustes> => {
   if (!supabaseConfigurado) return ajustesDemo;
   const data = await ajustesPublicos();
   if (!data) return ajustesDemo;
-  return { ...data, precio_instalacion: Number(data.precio_instalacion), precio_dominio: Number(data.precio_dominio) };
+  return {
+    ...(data as Ajustes),
+    precio_instalacion: Number(data.precio_instalacion),
+    precio_dominio: Number(data.precio_dominio),
+    cuota_mototaxi: Number(data.cuota_mototaxi ?? ajustesDemo.cuota_mototaxi),
+    precio_carga_extra: Number(data.precio_carga_extra ?? ajustesDemo.precio_carga_extra),
+  };
 });
 
 const planesVisibles = unstable_cache(
   async (): Promise<Plan[]> => {
-    const { data, error } = await crearClientePublico()
-      .from("planes")
-      .select("id, nombre, subtitulo, precio_mensual, limite_productos, caracteristicas, color, orden, visible")
-      .eq("visible", true)
-      .order("orden")
-      .order("id");
+    const { data, error } = await conRespaldo<Plan[]>(
+      (c) => crearClientePublico().from("planes").select(c).eq("visible", true).order("orden").order("id"),
+      [COLUMNAS_PLAN_25, COLUMNAS_PLAN],
+    );
     if (error) throw error;
-    return data.map(aPlan);
+    return (data ?? []).map(aPlan);
   },
   ["planes-visibles"],
   opcionesCache,
@@ -53,20 +82,21 @@ export async function obtenerPlanesPublicos(): Promise<Plan[]> {
 export const obtenerPlanes = cache(async (): Promise<Plan[]> => {
   if (!supabaseConfigurado) return planesDemo;
   const supabase = await crearClienteServidor();
-  const { data, error } = await supabase
-    .from("planes")
-    .select("id, nombre, subtitulo, precio_mensual, limite_productos, caracteristicas, color, orden, visible")
-    .order("orden")
-    .order("id");
+  const { data, error } = await conRespaldo<Plan[]>(
+    (c) => supabase.from("planes").select(c).order("orden").order("id"),
+    [COLUMNAS_PLAN_25, COLUMNAS_PLAN],
+  );
   if (error) throw error;
-  return data.map(aPlan);
+  return (data ?? []).map(aPlan);
 });
 
 const COLUMNAS_CLIENTE =
   "id, negocio, contacto, codigo_pais, celular, correo, direccion, sitio_url, dominio, plan_id, con_dominio, limite_personalizado, cuota_personalizada, estado, fecha_inicio, proximo_pago, instalacion_pagada, notas, tipo_negocio_id, tipo_negocio_otro, tienda_id, creado_en";
+const COLUMNAS_CLIENTE_25 = COLUMNAS_CLIENTE + ", municipio_id";
 
 const aCliente = (c: Cliente): Cliente => ({
   ...c,
+  municipio_id: c.municipio_id ?? null,
   cuota_personalizada: c.cuota_personalizada == null ? null : Number(c.cuota_personalizada),
 });
 const aPago = (p: Pago): Pago => ({ ...p, monto: Number(p.monto), numero_recibo: Number(p.numero_recibo) });
@@ -74,15 +104,21 @@ const aPago = (p: Pago): Pago => ({ ...p, monto: Number(p.monto), numero_recibo:
 export async function obtenerClientes(): Promise<Cliente[]> {
   if (!supabaseConfigurado) return clientesDemo;
   const supabase = await crearClienteServidor();
-  const { data, error } = await supabase.from("clientes").select(COLUMNAS_CLIENTE).order("negocio");
+  const { data, error } = await conRespaldo<Cliente[]>(
+    (c) => supabase.from("clientes").select(c).order("negocio"),
+    [COLUMNAS_CLIENTE_25, COLUMNAS_CLIENTE],
+  );
   if (error) throw error;
-  return data.map(aCliente);
+  return (data ?? []).map(aCliente);
 }
 
 export async function obtenerCliente(id: number): Promise<Cliente | null> {
   if (!supabaseConfigurado) return clientesDemo.find((c) => c.id === id) ?? null;
   const supabase = await crearClienteServidor();
-  const { data } = await supabase.from("clientes").select(COLUMNAS_CLIENTE).eq("id", id).maybeSingle();
+  const { data } = await conRespaldo<Cliente>(
+    (c) => supabase.from("clientes").select(c).eq("id", id).maybeSingle(),
+    [COLUMNAS_CLIENTE_25, COLUMNAS_CLIENTE],
+  );
   return data ? aCliente(data) : null;
 }
 

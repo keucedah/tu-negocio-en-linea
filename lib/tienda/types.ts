@@ -66,6 +66,13 @@ export type FilaTienda = {
   banners_movil_path?: string[];
   /** Fondo del título de la portada (2.4). Vacío = el de la barra. */
   color_portada?: string;
+  /** Dirección de la tienda, copiada de la ficha del cliente (2.5). */
+  direccion?: string;
+  /** Municipio de la tienda: ahí salen sus mototaxistas (2.5). */
+  municipio_id?: number | null;
+  municipio?: { nombre: string } | null;
+  /** El dueño puede apagar "Enviar con mototaxi" en su panel (2.5). */
+  ofrece_mototaxi?: boolean;
   tipo: Pick<TipoNegocio, "nombre" | "titulo_portada" | "texto_portada" | "texto_buscador"> | null;
 };
 
@@ -91,4 +98,10 @@ export type Tienda = {
   colorPortada: string;
   /** Dominio propio (ana.com) o vacío. Sirve para la dirección oficial (canónica) en Google. */
   dominio: string;
+  /** Dirección de la tienda y su municipio (para el mensaje al mototaxista). */
+  direccion: string;
+  municipio: string;
+  municipioId: number | null;
+  /** Muestra "Enviar con mototaxi" en el carrito (si hay mototaxistas en su municipio). */
+  ofreceMototaxi: boolean;
 };

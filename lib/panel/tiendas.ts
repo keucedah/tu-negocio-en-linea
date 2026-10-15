@@ -40,6 +40,13 @@ function datosControlados(cliente: Cliente, plan: Plan | undefined) {
   };
 }
 
+/** Desde la 2.5 la tienda también lleva la dirección y el municipio de su cliente (para los mototaxis). */
+const datos25 = (cliente: Cliente) => ({ direccion: cliente.direccion.slice(0, 200), municipio_id: cliente.municipio_id ?? null });
+
+/** Columna que todavía no existe porque falta el SQL de la 2.5. */
+export const faltaColumna = (e: { code?: string; message?: string } | null) =>
+  Boolean(e && (e.code === "42703" || e.code === "PGRST204"));
+
 const errorDominio = (m: string) =>
   m.includes("tiendas_dominio_key") ? "Ese dominio ya lo usa otra tienda." : m;
 
@@ -56,7 +63,7 @@ export async function sincronizarTienda(cliente: Cliente, plan: Plan | undefined
     .select("tipo_negocio_id, color_principal, color_encabezado")
     .eq("id", cliente.tienda_id)
     .maybeSingle();
-  const cambios: Record<string, unknown> = { ...datosControlados(cliente, plan), actualizado_en: new Date().toISOString() };
+  const cambios: Record<string, unknown> = { ...datosControlados(cliente, plan), ...datos25(cliente), actualizado_en: new Date().toISOString() };
   if (actual && actual.tipo_negocio_id !== cliente.tipo_negocio_id) {
     const [anterior, nuevo] = await Promise.all([leerTipo(sb, actual.tipo_negocio_id), leerTipo(sb, cliente.tipo_negocio_id)]);
     const sinTocar =
@@ -68,7 +75,12 @@ export async function sincronizarTienda(cliente: Cliente, plan: Plan | undefined
       cambios.color_encabezado = nuevo.color_encabezado;
     }
   }
-  const { error } = await sb.from("tiendas").update(cambios).eq("id", cliente.tienda_id);
+  let { error } = await sb.from("tiendas").update(cambios).eq("id", cliente.tienda_id);
+  if (faltaColumna(error)) {
+    delete cambios.direccion;
+    delete cambios.municipio_id;
+    ({ error } = await sb.from("tiendas").update(cambios).eq("id", cliente.tienda_id));
+  }
   return error ? "No se pudo actualizar su tienda: " + errorDominio(error.message) : null;
 }
 
@@ -112,24 +124,28 @@ export async function crearTienda(
   if (!existente && clave.length < 8) return { ok: false, mensaje: "La contraseña debe tener al menos 8 caracteres." };
   const tipo = await leerTipo(sb, cliente.tipo_negocio_id);
 
-  const { data: tienda, error } = await sb
-    .from("tiendas")
-    .insert({
-      slug,
-      nombre_tienda: cliente.negocio.slice(0, 60),
-      codigo_pais: cliente.codigo_pais,
-      celular: cliente.celular,
-      // Diseño sugerido de su tipo de negocio; el dueño lo cambia luego en "Apariencia".
-      color_principal: tipo?.color_principal ?? COLOR_PRINCIPAL,
-      color_encabezado: tipo?.color_encabezado ?? COLOR_ENCABEZADO,
-      ...datosControlados(cliente, plan),
-    })
-    .select("id")
-    .single();
+  const fila: Record<string, unknown> = {
+    slug,
+    nombre_tienda: cliente.negocio.slice(0, 60),
+    codigo_pais: cliente.codigo_pais,
+    celular: cliente.celular,
+    // Diseño sugerido de su tipo de negocio; el dueño lo cambia luego en "Apariencia".
+    color_principal: tipo?.color_principal ?? COLOR_PRINCIPAL,
+    color_encabezado: tipo?.color_encabezado ?? COLOR_ENCABEZADO,
+    ...datosControlados(cliente, plan),
+    ...datos25(cliente),
+  };
+  let { data: tienda, error } = await sb.from("tiendas").insert(fila).select("id").single();
+  if (faltaColumna(error)) {
+    delete fila.direccion;
+    delete fila.municipio_id;
+    ({ data: tienda, error } = await sb.from("tiendas").insert(fila).select("id").single());
+  }
   if (error) {
     if (error.code === "23505" && error.message.includes("slug")) return { ok: false, mensaje: `La dirección “${slug}” ya la usa otra tienda.` };
     return { ok: false, mensaje: "No se pudo crear la tienda: " + errorDominio(error.message) };
   }
+  if (!tienda) return { ok: false, mensaje: "No se pudo crear la tienda." };
 
   let userId = existente?.id;
   if (!userId) {
