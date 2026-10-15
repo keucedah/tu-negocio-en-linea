@@ -66,8 +66,12 @@ update public.tiendas t set direccion = c.direccion
   from public.clientes c
  where c.tienda_id = t.id and t.direccion = '' and c.direccion <> '';
 
--- El dueño de la tienda puede prender o apagar "Ofrecer mototaxi" en su panel
-grant update (ofrece_mototaxi) on public.tiendas to authenticated;
+-- "Servicio de mototaxi" lo prende o apaga solo el administrador, en la ficha del cliente (2.5.1)
+alter table public.clientes add column if not exists ofrece_mototaxi boolean not null default true;
+update public.clientes c set ofrece_mototaxi = t.ofrece_mototaxi
+  from public.tiendas t
+ where t.id = c.tienda_id and c.ofrece_mototaxi <> t.ofrece_mototaxi;
+revoke update (ofrece_mototaxi) on public.tiendas from authenticated;
 
 -- ===========================================================================
 -- 3) Datos de tu negocio: mensualidad de los mototaxistas y precio de carga de productos

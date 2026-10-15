@@ -23,8 +23,9 @@ Si subes el sitio sin el SQL, sigue funcionando pero sin las partes nuevas.
   aviso de cobro por WhatsApp y un enlace personal donde ve su estado (`/mototaxi/...`, no sale en Google).
   Si no paga, sale en gris en las tiendas y no lo pueden elegir. La identidad nunca sale de la base de datos.
 - **Tienda**: el carrito tiene "Enviar con mototaxi". El cliente elige un mototaxista de su municipio, se
-  descarga una imagen con el pedido y se abre WhatsApp del mototaxista. El dueño lo puede apagar en su
-  panel ("Ofrecer 'Enviar con mototaxi'"); viene encendido.
+  descarga una imagen con el pedido y se abre WhatsApp del mototaxista. Viene encendido en todas las tiendas.
+  **Solo el administrador** lo apaga o enciende, en la ficha del cliente ("Servicio de mototaxi en su tienda").
+  El dueño solo ve si está activado (2.5.1).
 - **Publicidad** (Admin › Publicidad): anuncios pagados de otras tiendas u otros negocios. Salen solo en
   tiendas con un plan que tenga marcado "Muestra publicidad de otras tiendas" (Básico y Pro), nunca en la
   tienda que se anuncia ni en tiendas del mismo tipo de negocio. Se puede limitar a un municipio y a fechas.
