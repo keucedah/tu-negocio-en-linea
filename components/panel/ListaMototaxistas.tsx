@@ -21,6 +21,8 @@ export type FilaMototaxi = {
   cuota: string;
   elegido: number;
   sinPermiso: boolean;
+  /** "Ocupado hasta las …" o vacío. */
+  ocupado: string;
   enlaceCobro: string;
 };
 
@@ -99,6 +101,7 @@ export default function ListaMototaxistas({ filas, municipios }: { filas: FilaMo
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
                     <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${m.claseEstado}`}>{m.textoEstado}</span>
                     {m.sinPermiso && <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-800">Falta su permiso</span>}
+                    {m.ocupado && <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-700">{m.ocupado}</span>}
                   </div>
                 </div>
                 <div className="shrink-0 text-right text-xs text-gray-500">

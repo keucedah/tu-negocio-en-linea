@@ -11,14 +11,14 @@ import { lempiras } from "@/lib/precio";
 
 export type TiendaPedido = { nombre: string; direccion: string; municipio: string; color: string; whatsapp: string };
 
-/** Mezcla la lista (cada vez que se abre, otro orden) y deja los suspendidos al final. */
+/** Mezcla la lista (cada vez que se abre, otro orden) y deja los ocupados al final. */
 function mezclar(lista: MototaxiPublico[]) {
   const a = [...lista];
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
-  return [...a.filter((m) => !m.suspendido), ...a.filter((m) => m.suspendido)];
+  return [...a.filter((m) => !m.ocupado), ...a.filter((m) => m.ocupado)];
 }
 
 function Ficha({ m, grande = false }: { m: MototaxiPublico; grande?: boolean }) {
@@ -148,16 +148,16 @@ export default function PedidoMototaxi({
                 <li key={m.id}>
                   <button
                     type="button"
-                    disabled={m.suspendido}
+                    disabled={m.ocupado}
                     onClick={() => setElegido(m)}
-                    className={`w-full rounded-2xl border p-3 text-left transition ${m.suspendido ? "cursor-not-allowed bg-gray-50 opacity-60 grayscale" : "hover:border-marca-500 hover:bg-marca-50"}`}
-                    aria-label={m.suspendido ? `${m.nombre}, suspendido` : `Elegir a ${m.nombre}`}
+                    className={`w-full rounded-2xl border p-3 text-left transition ${m.ocupado ? "cursor-not-allowed bg-gray-50 opacity-60 grayscale" : "hover:border-marca-500 hover:bg-marca-50"}`}
+                    aria-label={m.ocupado ? `${m.nombre}, ocupado` : `Elegir a ${m.nombre}`}
                   >
                     <div className="flex items-center gap-3">
                       <div className="min-w-0 flex-1"><Ficha m={m} /></div>
                       {m.fotoMoto && <img src={m.fotoMoto} alt="" className="h-14 w-20 shrink-0 rounded-lg object-cover" />}
                     </div>
-                    {m.suspendido && <span className="mt-2 inline-block rounded-full bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-700">Suspendido</span>}
+                    {m.ocupado && <span className="mt-2 inline-block rounded-full bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-700">Ocupado</span>}
                   </button>
                 </li>
               ))}

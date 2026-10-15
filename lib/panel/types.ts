@@ -176,6 +176,8 @@ export type Mototaxista = {
   notas: string;
   token: string;
   veces_elegido: number;
+  /** Ocupado hasta esta hora (2.6, lo pone él desde su App). Vacío o pasada = Disponible. */
+  ocupado_hasta: string | null;
   creado_en: string;
 };
 

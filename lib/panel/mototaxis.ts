@@ -9,6 +9,8 @@ import type { Ajustes, Mototaxista, PagoMototaxi } from "./types";
 const COLUMNAS =
   "id, codigo, nombre, codigo_pais, celular, identidad, direccion, numero_mototaxi, foto_url, foto_path, foto_moto_url, foto_moto_path, " +
   "municipio_id, municipios_extra, acepto_publicar, acepto_fecha, cuota_personalizada, pagado_hasta, activo, notas, token, veces_elegido, creado_en";
+/** Desde la 2.6: hasta qué hora está Ocupado (lo pone él desde su App). */
+const COLUMNAS_26 = COLUMNAS + ", ocupado_hasta";
 
 const aMototaxista = (m: Mototaxista): Mototaxista => ({
   ...m,
@@ -16,13 +18,29 @@ const aMototaxista = (m: Mototaxista): Mototaxista => ({
   municipio_id: m.municipio_id == null ? null : Number(m.municipio_id),
   municipios_extra: (m.municipios_extra ?? []).map(Number),
   cuota_personalizada: m.cuota_personalizada == null ? null : Number(m.cuota_personalizada),
+  ocupado_hasta: m.ocupado_hasta ?? null,
 });
 
+/** Columna que todavía no existe porque falta el SQL de la 2.6. */
+const falta26 = (e: { code?: string } | null) => Boolean(e && (e.code === "42703" || e.code === "PGRST204"));
+
+/** Ocupado ahora mismo (se le pasa solo a las 2 horas). */
+export const estaOcupado = (m: Pick<Mototaxista, "ocupado_hasta">, ahora = Date.now()) =>
+  Boolean(m.ocupado_hasta && new Date(m.ocupado_hasta).getTime() > ahora);
+
 /** null = falta ejecutar el SQL de la 2.5. */
+/** "Ocupado hasta las 3:45 p. m." (hora de Honduras), o vacío si está disponible. */
+export function textoOcupado(m: Pick<Mototaxista, "ocupado_hasta">, ahora = Date.now()): string {
+  if (!estaOcupado(m, ahora)) return "";
+  const hora = new Date(m.ocupado_hasta as string).toLocaleTimeString("es-HN", { timeZone: "America/Tegucigalpa", hour: "numeric", minute: "2-digit" });
+  return `Ocupado hasta las ${hora}`;
+}
+
 export async function obtenerMototaxistas(): Promise<Mototaxista[] | null> {
   if (!supabaseConfigurado) return [];
   const supabase = await crearClienteServidor();
-  const { data, error } = await supabase.from("mototaxistas").select(COLUMNAS).order("id");
+  let { data, error } = await supabase.from("mototaxistas").select(COLUMNAS_26).order("id");
+  if (falta26(error)) ({ data, error } = await supabase.from("mototaxistas").select(COLUMNAS).order("id"));
   if (error) return null;
   return (data as unknown as Mototaxista[]).map(aMototaxista);
 }
@@ -30,7 +48,8 @@ export async function obtenerMototaxistas(): Promise<Mototaxista[] | null> {
 export async function obtenerMototaxista(id: number): Promise<Mototaxista | null> {
   if (!supabaseConfigurado || !Number.isInteger(id)) return null;
   const supabase = await crearClienteServidor();
-  const { data } = await supabase.from("mototaxistas").select(COLUMNAS).eq("id", id).maybeSingle();
+  let { data, error } = await supabase.from("mototaxistas").select(COLUMNAS_26).eq("id", id).maybeSingle();
+  if (falta26(error)) ({ data } = await supabase.from("mototaxistas").select(COLUMNAS).eq("id", id).maybeSingle());
   return data ? aMototaxista(data as unknown as Mototaxista) : null;
 }
 
