@@ -8,6 +8,28 @@ Plataforma SaaS de catálogos en línea: tu página, tu panel de clientes y la t
 
 Los pasos completos están en la guía `guia-plataforma.pdf`.
 
+## Novedades de la 2.4.2: SEO (Google)
+
+No cambia la base de datos ni la App.
+
+- `robots.txt` y `sitemap.xml` se generan solos (`app/robots.ts` y `app/sitemap.ts`). El sitemap trae la página
+  principal, cada tienda activa y todos sus productos, y se actualiza solo. **Borra `public/robots.txt` y
+  `public/sitemap.xml` si los tienes**: chocan con los automáticos.
+- Cada página tiene su dirección oficial (canónica) con www, título y descripción para Google y vista previa
+  al compartir en WhatsApp y Facebook. Las páginas de producto llevan nombre, precio y foto.
+- Los paneles y las páginas para entrar llevan "noindex": Google las saca de los resultados.
+- En Vercel, `URL_SITIO` debe ser `https://www.tunegocioenlineahn.com` (con www).
+
+## Novedades de la 2.4.1
+
+**Antes de subir esta versión, ejecuta en Supabase > SQL Editor del proyecto tu-negocio-en-linea `supabase/actualizacion-2.4.1.sql`.**
+
+- Cada banner puede tener, además, una imagen para celular de 1200 × 600 píxeles (2:1), con letras más grandes.
+  En pantallas de menos de 640 píxeles de ancho (celular en vertical) se ve esa; en computadora, tablet o
+  celular acostado se ve la de 1600 × 400. Es opcional: si no la subes, en el celular se ve la de computadora.
+- El navegador descarga solo la imagen que va a mostrar.
+- La App no cambia.
+
 ## Novedades de la 2.4
 
 **Antes de subir esta versión, ejecuta en Supabase > SQL Editor del proyecto tu-negocio-en-linea `supabase/actualizacion-2.4.sql`.**
@@ -15,7 +37,8 @@ Los pasos completos están en la guía `guia-plataforma.pdf`.
 - Cada tienda puede tener hasta 3 banners. Con más de uno, pasan solos cada 4 segundos como carrusel,
   con puntitos para cambiar y deslizando con el dedo en el celular. Al pasar el puntero, el banner se
   agranda un poco y el carrusel se detiene.
-- Los banners son más bajos: proporción 4:1, medida recomendada 1600 × 400 píxeles. Siempre se ven completos.
+- Los banners son más bajos (proporción 4:1, medida recomendada 1600 × 400 píxeles) y tienen el mismo ancho
+  que las tarjetas de productos. Siempre se ven completos.
 - En Apariencia se puede elegir el color de fondo del título y el texto de la portada, igual que el color
   principal y el de la barra. El color del texto se pone solo (oscuro o blanco) para que se lea bien.
 - La App no cambia: sigue mostrando el primer banner.
