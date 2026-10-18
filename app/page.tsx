@@ -304,6 +304,10 @@ export default async function Inicio() {
         <p className="font-bold text-gray-200">{ajustes.nombre_negocio}</p>
         {ajustes.eslogan && <p className="text-xs">{ajustes.eslogan}</p>}
         <p className="mt-2">© {new Date().getFullYear()} {ajustes.direccion}</p>
+        <p className="mt-3 space-x-4">
+          <Link href="/privacidad" className="hover:text-white hover:underline">Política de privacidad</Link>
+          <Link href="/terminos" className="hover:text-white hover:underline">Términos y condiciones</Link>
+        </p>
         {/* Acceso discreto para el administrador */}
         <Link href="/entrar" className="mt-3 inline-block text-xs uppercase tracking-wider text-gray-600 hover:text-gray-300">
           Entrar

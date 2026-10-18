@@ -36,7 +36,7 @@ function leerProducto(formData: FormData) {
   const destacado = formData.get("destacado") === "on";
   // Precio opcional: solo cuenta si el dueño marcó "Mostrar precio"
   const precio = formData.get("con_precio") === "on" ? leerPrecio(String(formData.get("precio") ?? "")) : null;
-  // Tallas: solo si el dueño marcó "Tiene tallas"; llegan como lista en JSON
+  // Tallas o medidas: solo si el dueño marcó "Tiene tallas" (o medidas…); llegan como lista en JSON
   let tallas: string[] = [];
   const conTallas = formData.get("con_tallas") === "on";
   if (conTallas) {
@@ -117,7 +117,7 @@ export async function crearProducto(tiendaId: number, _prev: Resultado, formData
     const { nombre, descripcion, categoria_id, archivo, archivoMini, destacado, precio, tallas, conTallas } = leerProducto(formData);
     if (!nombre) return { ok: false, mensaje: "El nombre es obligatorio." };
     if (precio === "invalido") return { ok: false, mensaje: "Escribe el precio solo con números, por ejemplo 150 o 1250.50." };
-    if (conTallas && tallas.length === 0) return { ok: false, mensaje: "Marca al menos una talla o quita la casilla “Tiene tallas”." };
+    if (conTallas && tallas.length === 0) return { ok: false, mensaje: "Marca o escribe al menos una talla o medida, o quita la casilla “Tiene…” de ese cuadro." };
     if (!categoria_id) return { ok: false, mensaje: "Elige una categoría." };
     if (!archivo) return { ok: false, mensaje: "Sube una imagen del producto." };
     const errImg = validarImagen(archivo);
@@ -157,7 +157,7 @@ export async function actualizarProducto(tiendaId: number, _prev: Resultado, for
     const { nombre, descripcion, categoria_id, archivo, archivoMini, destacado, precio, tallas, conTallas } = leerProducto(formData);
     if (!nombre) return { ok: false, mensaje: "El nombre es obligatorio." };
     if (precio === "invalido") return { ok: false, mensaje: "Escribe el precio solo con números, por ejemplo 150 o 1250.50." };
-    if (conTallas && tallas.length === 0) return { ok: false, mensaje: "Marca al menos una talla o quita la casilla “Tiene tallas”." };
+    if (conTallas && tallas.length === 0) return { ok: false, mensaje: "Marca o escribe al menos una talla o medida, o quita la casilla “Tiene…” de ese cuadro." };
     if (!categoria_id) return { ok: false, mensaje: "Elige una categoría." };
     const errImg = validarImagen(archivo);
     if (errImg) return { ok: false, mensaje: errImg };

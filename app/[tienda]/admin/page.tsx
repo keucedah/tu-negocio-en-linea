@@ -20,7 +20,7 @@ import {
 } from "@/app/acciones-tienda";
 import { cerrarSesion } from "@/app/acciones-entrar-tienda";
 import { obtenerAdminTienda } from "@/lib/supabase/server";
-import { POR_PAGINA_PANEL, aTienda, obtenerBase, obtenerFilaTienda, obtenerPanelProductos } from "@/lib/tienda/datos";
+import { POR_PAGINA_PANEL, aTienda, obtenerBase, obtenerFilaTienda, obtenerMedidasUsadas, obtenerPanelProductos } from "@/lib/tienda/datos";
 import { supabaseConfigurado } from "@/lib/config";
 
 // Página privada: no debe salir en Google
@@ -80,11 +80,12 @@ export default async function Admin({
   const pedido = sp.s;
   const seccion: Seccion = SECCIONES.some((x) => x.id === pedido) ? (pedido as Seccion) : "productos";
   const q = (sp.q ?? "").slice(0, 60);
-  const [{ categorias, conteo, total, top, productos, encontrados, pagina }, base] = await Promise.all([
+  const tienda = aTienda(fila);
+  const [{ categorias, conteo, total, top, productos, encontrados, pagina }, base, usadas] = await Promise.all([
     obtenerPanelProductos(fila.id, q, Math.floor(Number(sp.pagina)) || 1),
     obtenerBase(),
+    seccion === "productos" ? obtenerMedidasUsadas(fila.id, tienda.gruposMedidas.flatMap((g) => g.tallas)) : Promise.resolve([]),
   ]);
-  const tienda = aTienda(fila);
   const nombreCat = new Map(categorias.map((c) => [c.id, c.nombre]));
   const paginas = Math.max(1, Math.ceil(encontrados / POR_PAGINA_PANEL));
   const enlacePagina = (n: number) => {
@@ -149,7 +150,7 @@ export default async function Admin({
                 <Link href={`${base}/admin?s=tienda`} className="font-semibold text-marca-700 hover:underline">Datos y categorías</Link>.
               </p>
             ) : (
-              <FormularioProducto categorias={categorias} accion={crearProducto.bind(null, fila.id)} />
+              <FormularioProducto categorias={categorias} accion={crearProducto.bind(null, fila.id)} medidas={{ palabra: tienda.palabraMedida, grupos: tienda.gruposMedidas, usadas }} />
             )}
           </section>
 

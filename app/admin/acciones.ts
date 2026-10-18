@@ -1,5 +1,6 @@
 "use server";
 
+import { limpiarGrupos, palabraMedida } from "@/lib/tallas";
 import { revalidatePath } from "next/cache";
 import { refrescarCache } from "@/lib/cache";
 import { cookies } from "next/headers";
@@ -409,10 +410,18 @@ export async function guardarTipo(_prev: Resultado, f: FormData): Promise<Result
       categorias,
       orden: Math.max(-999, Math.min(999, Math.trunc(Number(f.get("orden")) || 0))),
       activo: f.get("activo") === "on",
+      // 2.7: palabra y grupos de tallas o medidas
+      medida_palabra: palabraMedida(texto(f, "medida_palabra", 20)).una,
+      medida_grupos: limpiarGrupos(String(f.get("medida_grupos") ?? "")),
     };
-    const { error } = id
-      ? await supabase.from("tipos_negocio").update(datos).eq("id", id)
-      : await supabase.from("tipos_negocio").insert(datos);
+    const guardar = (d: Partial<typeof datos>) =>
+      id ? supabase.from("tipos_negocio").update(d).eq("id", id) : supabase.from("tipos_negocio").insert(d);
+    let { error } = await guardar(datos);
+    // Sin el SQL de la 2.7 todavía: guarda lo demás
+    if (error && (error.code === "42703" || error.code === "PGRST204")) {
+      const { medida_palabra: _p, medida_grupos: _g, ...resto } = datos;
+      ({ error } = await guardar(resto));
+    }
     if (error) {
       if (error.code === "23505") return { ok: false, mensaje: "Ya existe un tipo de negocio con ese nombre." };
       return { ok: false, mensaje: "No se pudo guardar: " + error.message };

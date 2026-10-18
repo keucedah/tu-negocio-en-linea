@@ -7,7 +7,7 @@ import WhatsAppFlotante from "@/components/tienda/WhatsAppFlotante";
 import { BaseTienda } from "@/components/tienda/BaseTienda";
 import { obtenerBase, obtenerTiendaPublica as obtenerTienda } from "@/lib/tienda/datos";
 import { variablesTema } from "@/lib/tema";
-import { resumen, urlTienda } from "@/lib/seo";
+import { resumen, SITIO, urlTienda } from "@/lib/seo";
 import { obtenerMototaxis } from "@/lib/mototaxis";
 
 type Props = { params: Promise<{ tienda: string }> };
@@ -56,7 +56,7 @@ export default async function LayoutTienda({ params, children }: Props & { child
   return (
     <div className="flex min-h-screen flex-col" style={variablesTema(tienda.colorPrincipal, tienda.colorEncabezado)}>
       <BaseTienda base={base}>
-        <CartProvider clave={tienda.slug}>
+        <CartProvider clave={tienda.slug} palabra={tienda.palabraMedida}>
           <Header tienda={tienda} />
           <main className="flex-1">{children}</main>
           <footer className="border-t bg-white py-6 text-center text-xs text-gray-500">
@@ -69,6 +69,7 @@ export default async function LayoutTienda({ params, children }: Props & { child
               </p>
             )}
             © {new Date().getFullYear()} {tienda.nombre}. Precios y disponibilidad por WhatsApp.
+            <a href={`${SITIO}/privacidad`} className="ml-2 underline hover:text-gray-700">Privacidad</a>
           </footer>
           <WhatsAppFlotante whatsapp={tienda.whatsapp} tienda={tienda.nombre} />
           <CartDrawer

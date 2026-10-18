@@ -17,7 +17,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const h = await headers();
   const host = (h.get("x-forwarded-host") ?? h.get("host") ?? "").split(":")[0].toLowerCase().replace(/^www\./, "");
   const plataforma = !host || host === HOST_SITIO || /^(localhost|127\.0\.0\.1)$|\.vercel\.app$/.test(host);
-  const urls: MetadataRoute.Sitemap = plataforma ? [{ url: SITIO + "/", changeFrequency: "weekly", priority: 1 }] : [];
+  const urls: MetadataRoute.Sitemap = plataforma
+    ? [
+        { url: SITIO + "/", changeFrequency: "weekly", priority: 1 },
+        { url: SITIO + "/privacidad", changeFrequency: "yearly", priority: 0.2 },
+        { url: SITIO + "/terminos", changeFrequency: "yearly", priority: 0.2 },
+      ]
+    : [];
   if (!supabaseConfigurado) return urls;
 
   const supabase = crearClientePublico();

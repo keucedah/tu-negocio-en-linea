@@ -3,6 +3,7 @@ import Formulario from "@/components/panel/Formulario";
 import { eliminarTipo, guardarTipo } from "@/app/admin/acciones";
 import { obtenerClientes, obtenerTipos } from "@/lib/panel/datos";
 import type { TipoNegocio } from "@/lib/panel/types";
+import { leerGrupos, palabraMedida } from "@/lib/tallas";
 
 function CamposTipo({ tipo }: { tipo?: TipoNegocio }) {
   return (
@@ -42,6 +43,30 @@ function CamposTipo({ tipo }: { tipo?: TipoNegocio }) {
         <span className="etiqueta">Categorías iniciales (una por línea)</span>
         <textarea name="categorias" rows={4} maxLength={1000} defaultValue={tipo?.categorias} className="campo" />
       </label>
+      <fieldset className="space-y-3 rounded-lg border border-dashed p-3">
+        <legend className="px-1 text-sm font-semibold">Tallas o medidas de los productos</legend>
+        <label className="block">
+          <span className="etiqueta">Palabra (en singular)</span>
+          <input name="medida_palabra" maxLength={20} defaultValue={tipo?.medida_palabra || "talla"} className="campo" placeholder="talla, medida, presentación…" />
+          <span className="mt-1 block text-xs text-gray-500">
+            El dueño ve “Tiene medidas” y el cliente “Elige tu medida”. En el WhatsApp llega “(medida 3/4")”.
+          </span>
+        </label>
+        <label className="block">
+          <span className="etiqueta">Grupos para marcar (uno por línea)</span>
+          <textarea
+            name="medida_grupos"
+            rows={5}
+            maxLength={2000}
+            defaultValue={tipo?.medida_grupos ?? ""}
+            className="campo font-mono text-sm"
+            placeholder={'Pulgadas: 1/4", 1/2", 3/4", 1"\nMilímetros: 6 mm, 8 mm, 10 mm'}
+          />
+          <span className="mt-1 block text-xs text-gray-500">
+            Nombre del grupo, dos puntos y las opciones separadas por coma. Vacío = el dueño las escribe a mano. Cambiarlo no toca los productos que ya existen.
+          </span>
+        </label>
+      </fieldset>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" name="activo" defaultChecked={tipo?.activo ?? true} className="h-4 w-4" />
         Mostrar al agregar clientes
@@ -58,7 +83,8 @@ export default async function Tipos() {
         <h1 className="text-2xl font-bold">Tipos de negocio</h1>
         <p className="text-sm text-gray-600">
           Al crear la tienda de un cliente, empieza con los colores y las categorías de su tipo. Si el cliente deja vacíos los textos de su portada,
-          se usan los de aquí. Cambiar un tipo no cambia los colores de las tiendas que ya existen.
+          se usan los de aquí. Cambiar un tipo no cambia los colores de las tiendas que ya existen. La palabra y los grupos de tallas o medidas
+          sí se aplican al momento en todas las tiendas de ese tipo.
         </p>
       </div>
       <div className="space-y-3">
@@ -76,6 +102,7 @@ export default async function Tipos() {
                   {!t.activo && <span className="ml-2 text-xs text-gray-500">(oculto)</span>}
                   <span className="block truncate text-xs text-gray-500">
                     {usan} cliente(s) · {t.categorias ? t.categorias.split("\n").length : 0} categorías
+                    {t.medida_palabra ? ` · ${palabraMedida(t.medida_palabra).Varias}: ${leerGrupos(t.medida_grupos).map((g) => g.nombre).join(", ") || "a mano"}` : ""}
                   </span>
                 </span>
                 <span className="text-sm font-medium text-marca-700">Editar</span>

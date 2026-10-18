@@ -24,6 +24,14 @@ body {
 }
 
 @layer components {
+  /* Páginas de Privacidad y Términos (2.6.1) */
+  .legal { @apply leading-relaxed text-gray-700; }
+  .legal h2 { @apply mt-8 text-lg font-bold text-marino-900; }
+  .legal h3 { @apply mt-4 font-semibold text-gray-900; }
+  .legal p { @apply mt-3; }
+  .legal ul { @apply mt-3 list-disc space-y-1.5 pl-5; }
+  .legal a { @apply font-semibold text-marca-700 hover:underline; }
+
   .campo {
     @apply w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-marca-500 focus:ring-2 focus:ring-marca-100;
   }
