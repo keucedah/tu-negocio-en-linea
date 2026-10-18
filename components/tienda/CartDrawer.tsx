@@ -18,7 +18,7 @@ export default function CartDrawer({
   tienda?: TiendaPedido;
   mototaxis?: MototaxiPublico[];
 }) {
-  const { items, abierto, cerrar, cambiarCantidad, quitar, vaciar, totalUnidades } = useCarrito();
+  const { items, abierto, cerrar, cambiarCantidad, quitar, vaciar, totalUnidades, palabra } = useCarrito();
   const [nombre, setNombre] = useState("");
   const [nota, setNota] = useState("");
   // Cada vez que se abre la lista de mototaxistas sale en otro orden
@@ -39,7 +39,7 @@ export default function CartDrawer({
   const total = totalPedido(items);
 
   const cotizar = () => {
-    window.open(enlaceWhatsApp(whatsapp, mensajeCotizacion(items, { nombre, nota })), "_blank", "noopener");
+    window.open(enlaceWhatsApp(whatsapp, mensajeCotizacion(items, { nombre, nota }, palabra.una)), "_blank", "noopener");
   };
 
   return (
@@ -77,7 +77,7 @@ export default function CartDrawer({
                   <ImagenProducto src={i.imagen_url} alt={i.nombre} className="h-14 w-14 shrink-0 rounded-md" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{i.nombre}</p>
-                    {i.talla && <p className="text-xs font-semibold text-marca-700">Talla {i.talla}</p>}
+                    {i.talla && <p className="text-xs font-semibold text-marca-700">{palabra.Una} {i.talla}</p>}
                     {i.precio != null && (
                       <p className="text-xs text-gray-600">
                         {lempiras(i.precio)} c/u{i.cantidad > 1 && <> · <span className="font-semibold text-gray-800">{lempiras(i.precio * i.cantidad)}</span></>}

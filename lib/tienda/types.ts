@@ -1,3 +1,5 @@
+import type { GrupoMedidas } from "../tallas";
+
 export type Categoria = {
   id: number;
   nombre: string;
@@ -73,7 +75,11 @@ export type FilaTienda = {
   municipio?: { nombre: string } | null;
   /** El dueño puede apagar "Enviar con mototaxi" en su panel (2.5). */
   ofrece_mototaxi?: boolean;
-  tipo: Pick<TipoNegocio, "nombre" | "titulo_portada" | "texto_portada" | "texto_buscador"> | null;
+  tipo: (Pick<TipoNegocio, "nombre" | "titulo_portada" | "texto_portada" | "texto_buscador"> & {
+    /** Palabra y grupos de tallas o medidas (2.7). Faltan si no se ejecutó el SQL de la 2.7. */
+    medida_palabra?: string;
+    medida_grupos?: string;
+  }) | null;
 };
 
 export type BannerTienda = { pc: string; movil: string };
@@ -104,4 +110,8 @@ export type Tienda = {
   municipioId: number | null;
   /** Muestra "Enviar con mototaxi" en el carrito (si hay mototaxistas en su municipio). */
   ofreceMototaxi: boolean;
+  /** "talla", "medida", "presentación"… según el tipo de negocio (2.7). */
+  palabraMedida: string;
+  /** Grupos para marcar en el panel (Pulgadas, Calzado…) según el tipo de negocio (2.7). */
+  gruposMedidas: GrupoMedidas[];
 };

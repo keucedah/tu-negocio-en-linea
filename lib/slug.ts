@@ -1,6 +1,6 @@
 // Dirección (slug) y dominio de las tiendas. Sin nada del servidor: se usa también en formularios.
 
-const RESERVADAS = new Set(["admin", "entrar", "api", "demo", "producto", "www", "_next", "mototaxi"]);
+const RESERVADAS = new Set(["admin", "entrar", "api", "demo", "producto", "www", "_next", "mototaxi", "privacidad", "terminos"]);
 
 /** "Ferretería El Constructor" → "ferreteria-el-constructor" */
 export function sugerirSlug(texto: string): string {

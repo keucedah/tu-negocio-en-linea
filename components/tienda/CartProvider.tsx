@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { palabraMedida, type Palabra } from "@/lib/tallas";
 
 export type ItemCarrito = {
   /** Identifica la línea del carrito: el mismo producto en otra talla es otra línea. */
@@ -10,7 +11,7 @@ export type ItemCarrito = {
   imagen_url: string | null;
   /** Precio al momento de agregarlo; null si la tienda no lo muestra. */
   precio?: number | null;
-  /** Talla elegida por el cliente, si el producto tiene tallas. */
+  /** Talla o medida elegida por el cliente, si el producto tiene. */
   talla?: string | null;
   cantidad: number;
 };
@@ -27,11 +28,13 @@ type CarritoCtx = {
   cambiarCantidad: (clave: string, cantidad: number) => void;
   quitar: (clave: string) => void;
   vaciar: () => void;
+  /** Palabra de la tienda: talla, medida, presentación… (2.7). */
+  palabra: Palabra;
 };
 
 const Ctx = createContext<CarritoCtx | null>(null);
 // Cada tienda guarda su propio carrito en el navegador.
-export function CartProvider({ clave, children }: { clave: string; children: React.ReactNode }) {
+export function CartProvider({ clave, palabra = "talla", children }: { clave: string; palabra?: string; children: React.ReactNode }) {
   const CLAVE = `carrito-${clave}`;
   const [items, setItems] = useState<ItemCarrito[]>([]);
   const [abierto, setAbierto] = useState(false);
@@ -81,8 +84,9 @@ export function CartProvider({ clave, children }: { clave: string; children: Rea
       cambiarCantidad,
       quitar: (clave) => setItems((prev) => prev.filter((i) => i.clave !== clave)),
       vaciar: () => setItems([]),
+      palabra: palabraMedida(palabra),
     }),
-    [items, abierto, agregar, cambiarCantidad],
+    [items, abierto, agregar, cambiarCantidad, palabra],
   );
 
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;

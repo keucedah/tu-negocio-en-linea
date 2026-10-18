@@ -2,6 +2,9 @@ import { lempiras } from "./precio";
 
 type Linea = { nombre: string; cantidad: number; precio?: number | null; talla?: string | null };
 
+/** "(talla 40)", "(medida 3/4")"… con la palabra de la tienda (2.7). */
+const conMedida = (i: Linea, palabra: string) => (i.talla ? ` (${palabra} ${i.talla})` : "");
+
 /** Suma de los productos que tienen precio. null si ninguno tiene. */
 export function totalPedido(items: Linea[]) {
   const conPrecio = items.filter((i) => i.precio != null);
@@ -10,8 +13,8 @@ export function totalPedido(items: Linea[]) {
   return { monto, completo: conPrecio.length === items.length };
 }
 
-export function mensajeCotizacion(items: Linea[], cliente?: { nombre?: string; nota?: string }) {
-  const lineas = items.map((i) => `• ${i.cantidad} x ${i.nombre}${i.talla ? ` (talla ${i.talla})` : ""}${i.precio != null ? ` (${lempiras(i.precio)} c/u)` : ""}`);
+export function mensajeCotizacion(items: Linea[], cliente?: { nombre?: string; nota?: string }, palabra = "talla") {
+  const lineas = items.map((i) => `• ${i.cantidad} x ${i.nombre}${conMedida(i, palabra)}${i.precio != null ? ` (${lempiras(i.precio)} c/u)` : ""}`);
   const partes = ["Hola, me interesan estos productos:", "", ...lineas];
   const total = totalPedido(items);
   if (total) partes.push("", `${total.completo ? "Total" : "Total de los productos con precio"}: ${lempiras(total.monto)}`);
@@ -33,12 +36,14 @@ type DatosMototaxi = {
   nota?: string;
   tienda: string;
   direccionTienda: string;
+  /** Palabra de la tienda para las tallas o medidas (2.7). */
+  palabra?: string;
 };
 
 /** Productos con cantidad, precio, subtotal y total. */
-function lineasConSubtotal(items: Linea[]) {
+function lineasConSubtotal(items: Linea[], palabra = "talla") {
   const lineas = items.map((i) => {
-    const nombre = `${i.cantidad} x ${i.nombre}${i.talla ? ` (talla ${i.talla})` : ""}`;
+    const nombre = `${i.cantidad} x ${i.nombre}${conMedida(i, palabra)}`;
     if (i.precio == null) return `• ${nombre} (precio a consultar)`;
     return `• ${nombre}: ${lempiras(i.precio)} c/u = ${lempiras(Math.round(i.precio * i.cantidad * 100) / 100)}`;
   });
@@ -60,7 +65,7 @@ export function mensajeMototaxi(items: Linea[], d: DatosMototaxi) {
     `🏠 Llevarlos a: ${d.direccionCliente.trim()}`,
     "",
     "Los productos son:",
-    ...lineasConSubtotal(items),
+    ...lineasConSubtotal(items, d.palabra),
   ];
   if (d.nota?.trim()) partes.push("", `Comentario: ${d.nota.trim()}`);
   partes.push("", "La tarifa del mototaxi la acordamos por aquí.", "", `🛺 Mototaxista: ${fichaMototaxi(d.mototaxi)}`, "", "¡Gracias por su servicio!");
@@ -72,7 +77,7 @@ export function mensajeTiendaMototaxi(items: Linea[], d: DatosMototaxi) {
   const partes = [
     `Hola, soy *${d.cliente.trim()}*. Hice este pedido y lo va a recoger el mototaxista *${d.mototaxi.nombre}* (${d.mototaxi.codigo}${d.mototaxi.numero ? `, mototaxi N.º ${d.mototaxi.numero}` : ""}).`,
     "",
-    ...lineasConSubtotal(items),
+    ...lineasConSubtotal(items, d.palabra),
   ];
   if (d.nota?.trim()) partes.push("", `Comentario: ${d.nota.trim()}`);
   partes.push("", "¿Me lo pueden tener listo, por favor? ¡Gracias!");

@@ -1,23 +1,39 @@
 "use client";
 
 import { useState } from "react";
-import { GRUPOS_TALLAS, LARGO_TALLA, MAX_TALLAS, limpiarTallas } from "@/lib/tallas";
+import { GRUPOS_TALLAS, LARGO_TALLA, MAX_TALLAS, limpiarTallas, palabraMedida, type GrupoMedidas } from "@/lib/tallas";
 
 /**
  * Casilla "Tiene tallas" del formulario de producto. Al marcarla salen las tallas comunes con casillas
  * y un campo para escribir las que no estén en la lista. Se envían en el campo oculto "tallas" (JSON).
+ * Desde la 2.7 la palabra (talla, medida, presentación…) y los grupos son los del tipo de negocio de la tienda,
+ * y "usadas" son las que el dueño ya escribió en otros productos, para marcarlas de un toque.
  */
-export default function SelectorTallas({ iniciales = [] }: { iniciales?: string[] }) {
+export default function SelectorTallas({
+  iniciales = [],
+  palabra: palabraTienda = "talla",
+  grupos: gruposTienda = GRUPOS_TALLAS,
+  usadas = [],
+}: {
+  iniciales?: string[];
+  palabra?: string;
+  grupos?: GrupoMedidas[];
+  usadas?: string[];
+}) {
+  const palabra = palabraMedida(palabraTienda);
+  const otraPalabra = palabra.femenina ? "otra" : "otro";
+  const GRUPOS = gruposTienda;
   const [activo, setActivo] = useState(iniciales.length > 0);
   const [elegidas, setElegidas] = useState<string[]>(iniciales);
   const [otra, setOtra] = useState("");
   // Se ve un grupo a la vez (Ropa, Calzado…): empieza en el que más tallas del producto tiene
   const [grupo, setGrupo] = useState(() => {
-    const puntos = GRUPOS_TALLAS.map((g) => g.tallas.filter((t) => iniciales.some((i) => i.toLowerCase() === t.toLowerCase())).length);
+    const puntos = GRUPOS.map((g) => g.tallas.filter((t) => iniciales.some((i) => i.toLowerCase() === t.toLowerCase())).length);
     return Math.max(0, puntos.indexOf(Math.max(...puntos)));
   });
-  const comunes = new Set(GRUPOS_TALLAS.flatMap((g) => g.tallas.map((t) => t.toLowerCase())));
-  const propias = elegidas.filter((t) => !comunes.has(t.toLowerCase()));
+  const comunes = new Set(GRUPOS.flatMap((g) => g.tallas.map((t) => t.toLowerCase())));
+  // Escritas a mano: las de este producto y, para marcar de un toque, las que ya usó en otros productos
+  const propias = limpiarTallas([...elegidas.filter((t) => !comunes.has(t.toLowerCase())), ...usadas.filter((t) => !comunes.has(t.toLowerCase()))]);
   const marcada = (t: string) => elegidas.some((e) => e.toLowerCase() === t.toLowerCase());
 
   const cambiar = (t: string) =>
@@ -47,17 +63,20 @@ export default function SelectorTallas({ iniciales = [] }: { iniciales?: string[
       <label className="flex items-start gap-2 text-sm">
         <input type="checkbox" name="con_tallas" checked={activo} onChange={(e) => setActivo(e.target.checked)} className="mt-0.5 h-4 w-4" />
         <span>
-          <span className="font-medium">Tiene tallas</span>
-          <span className="block text-xs text-gray-600">Para calzado, ropa y todo lo que se pide por medida. El cliente elige su talla al agregarlo.</span>
+          <span className="font-medium">Tiene {palabra.varias}</span>
+          <span className="block text-xs text-gray-600">
+            Si este producto viene en varias {palabra.varias}. El cliente elige su {palabra.una} al agregarlo y le llega en el pedido.
+          </span>
         </span>
       </label>
 
       {activo && (
         <div className="mt-3 space-y-3">
           <input type="hidden" name="tallas" value={JSON.stringify(elegidas)} />
+          {GRUPOS.length > 0 && (
           <div>
-            <div className="mb-2 flex flex-wrap gap-1 border-b pb-2" role="tablist" aria-label="Tipo de talla">
-              {GRUPOS_TALLAS.map((g, i) => (
+            <div className="mb-2 flex flex-wrap gap-1 border-b pb-2" role="tablist" aria-label={`Grupos de ${palabra.varias}`}>
+              {GRUPOS.map((g, i) => (
                 <button
                   key={g.nombre}
                   type="button"
@@ -73,13 +92,16 @@ export default function SelectorTallas({ iniciales = [] }: { iniciales?: string[
               ))}
             </div>
             <fieldset>
-              <legend className="sr-only">{GRUPOS_TALLAS[grupo].nombre}</legend>
-              <div className="flex flex-wrap gap-1.5">{GRUPOS_TALLAS[grupo].tallas.map(casilla)}</div>
+              <legend className="sr-only">{GRUPOS[grupo].nombre}</legend>
+              <div className="flex flex-wrap gap-1.5">{GRUPOS[grupo].tallas.map(casilla)}</div>
             </fieldset>
           </div>
+          )}
 
           <fieldset>
-            <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">Otra talla</legend>
+            <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              {usadas.length > 0 ? `Tus ${palabra.varias} y ${otraPalabra} ${palabra.una}` : `${otraPalabra} ${palabra.una}`}
+            </legend>
             {propias.length > 0 && <div className="mb-2 flex flex-wrap gap-1.5">{propias.map(casilla)}</div>}
             <div className="flex gap-2">
               <input
@@ -92,9 +114,9 @@ export default function SelectorTallas({ iniciales = [] }: { iniciales?: string[
                   }
                 }}
                 maxLength={LARGO_TALLA * 4}
-                placeholder="Ej.: 46, Única, 10.5"
+                placeholder={palabra.una === "talla" ? "Ej.: 46, Única, 10.5" : "Escribe una o varias, separadas por coma"}
                 className="campo"
-                aria-label="Escribir otra talla"
+                aria-label={`Escribir ${otraPalabra} ${palabra.una}`}
               />
               <button type="button" onClick={agregarOtra} className="boton-secundario shrink-0">
                 Agregar
@@ -104,8 +126,8 @@ export default function SelectorTallas({ iniciales = [] }: { iniciales?: string[
 
           <p className="text-xs text-gray-600">
             {elegidas.length === 0
-              ? "Marca las tallas que tienes disponibles."
-              : `Tallas elegidas (${elegidas.length}${elegidas.length >= MAX_TALLAS ? `, máximo ${MAX_TALLAS}` : ""}): ${elegidas.join(", ")}`}
+              ? `Marca las ${palabra.varias} que tienes disponibles.`
+              : `${palabra.Varias} ${palabra.femenina ? "elegidas" : "elegidos"} (${elegidas.length}${elegidas.length >= MAX_TALLAS ? `, máximo ${MAX_TALLAS}` : ""}): ${elegidas.join(", ")}`}
           </p>
         </div>
       )}

@@ -49,6 +49,10 @@ export default function FormularioDemo({ whatsapp }: { whatsapp: string }) {
       <button disabled={enviando} className="boton-primario w-full py-3 text-base">
         {enviando ? "Enviando…" : "Solicitar demostración"}
       </button>
+      <p className="text-center text-xs text-gray-500">
+        Al enviar aceptas nuestra{" "}
+        <a href="/privacidad" className="underline hover:text-gray-700">Política de privacidad</a>.
+      </p>
     </form>
   );
 }

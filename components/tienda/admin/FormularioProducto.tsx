@@ -5,15 +5,18 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import type { Categoria, Producto } from "@/lib/tienda/types";
 import type { Resultado } from "@/app/acciones-tienda";
 import SelectorTallas from "./SelectorTallas";
+import type { GrupoMedidas } from "@/lib/tallas";
 import { LADO_FOTO, LADO_MINI, formatoPeso, optimizarCampo, optimizarImagen, ponerArchivo } from "@/lib/optimizarImagen";
 
 type Props = {
   categorias: Categoria[];
+  /** Palabra, grupos y medidas ya usadas de la tienda (2.7). */
+  medidas?: { palabra: string; grupos: GrupoMedidas[]; usadas: string[] };
   accion: (prev: Resultado, fd: FormData) => Promise<Resultado>;
   producto?: Producto;
 };
 
-export default function FormularioProducto({ categorias, accion, producto }: Props) {
+export default function FormularioProducto({ categorias, accion, producto, medidas }: Props) {
   const [resultado, enviar, enviando] = useActionState(accion, null);
   const formRef = useRef<HTMLFormElement>(null);
   const miniRef = useRef<HTMLInputElement>(null);
@@ -134,7 +137,7 @@ export default function FormularioProducto({ categorias, accion, producto }: Pro
         )}
       </div>
 
-      <SelectorTallas key={vuelta} iniciales={producto?.tallas ?? []} />
+      <SelectorTallas key={vuelta} iniciales={producto?.tallas ?? []} palabra={medidas?.palabra} grupos={medidas?.grupos} usadas={medidas?.usadas} />
 
       <label className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm">
         <input type="checkbox" name="destacado" defaultChecked={producto?.destacado ?? false} className="mt-0.5 h-4 w-4" />

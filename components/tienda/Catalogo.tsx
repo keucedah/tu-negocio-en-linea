@@ -7,6 +7,7 @@ import type { Categoria, Producto } from "@/lib/tienda/types";
 import { POR_PAGINA, type Filtros } from "@/lib/tienda/filtros";
 import ImagenProducto from "./ImagenProducto";
 import BotonAgregar from "./BotonAgregar";
+import { useCarrito } from "./CartProvider";
 import { useBase } from "./BaseTienda";
 import EtiquetaNuevo from "./EtiquetaNuevo";
 import { lempiras } from "@/lib/precio";
@@ -36,6 +37,7 @@ export default function Catalogo({
   filtros: Filtros;
   placeholder?: string;
 }) {
+  const { palabra } = useCarrito();
   const router = useRouter();
   const base = useBase();
   const pathname = base || "/";
@@ -172,7 +174,7 @@ export default function Catalogo({
                 </Link>
                 <p className="line-clamp-2 flex-1 text-sm text-gray-600">{p.descripcion}</p>
                 {p.tallas && p.tallas.length > 0 && (
-                  <p className="line-clamp-1 text-xs text-gray-500">Tallas: {p.tallas.join(" · ")}</p>
+                  <p className="line-clamp-1 text-xs text-gray-500">{palabra.Varias}: {p.tallas.join(" · ")}</p>
                 )}
                 {p.precio != null && <p className="text-lg font-bold text-marca-700">{lempiras(p.precio)}</p>}
                 <BotonAgregar producto={p} />

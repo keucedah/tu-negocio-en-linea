@@ -121,6 +121,10 @@ export type TipoNegocio = {
   categorias: string;
   orden: number;
   activo: boolean;
+  /** Palabra en singular para las tallas o medidas: talla, medida, presentación… (2.7). */
+  medida_palabra?: string;
+  /** Grupos para marcar, uno por línea: "Pulgadas: 1/4\", 1/2\"" (2.7). */
+  medida_grupos?: string;
 };
 
 /** Anuncio (sorteo, regalía, promoción) que sale en un carrusel en las tiendas de los clientes. */

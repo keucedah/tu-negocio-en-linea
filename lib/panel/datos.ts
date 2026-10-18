@@ -156,13 +156,13 @@ export async function obtenerSolicitudes(): Promise<Solicitud[]> {
 /** Tipos de negocio ordenados (todos; el formulario de clientes muestra solo los activos). */
 const tiposPublicos = unstable_cache(
   async (): Promise<TipoNegocio[]> => {
-    const { data, error } = await crearClientePublico()
-      .from("tipos_negocio")
-      .select("id, nombre, color_principal, color_encabezado, titulo_portada, texto_portada, texto_buscador, categorias, orden, activo")
-      .order("orden")
-      .order("nombre");
+    const columnas = "id, nombre, color_principal, color_encabezado, titulo_portada, texto_portada, texto_buscador, categorias, orden, activo";
+    const leer = (c: string) => crearClientePublico().from("tipos_negocio").select(c).order("orden").order("nombre").returns<TipoNegocio[]>();
+    let { data, error } = await leer(columnas + ", medida_palabra, medida_grupos");
+    // Sin el SQL de la 2.7 todavía: sin palabra ni grupos
+    if (error?.code === "42703") ({ data, error } = await leer(columnas));
     if (error) throw error;
-    return data;
+    return data ?? [];
   },
   ["tipos"],
   opcionesCache,

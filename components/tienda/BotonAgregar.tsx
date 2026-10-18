@@ -6,11 +6,12 @@ import type { Producto } from "@/lib/tienda/types";
 import { volarAlCarrito } from "./volarAlCarrito";
 
 /**
- * Botón para agregar al carrito. Si el producto tiene tallas, primero se elige la talla:
+ * Botón para agregar al carrito. Si el producto tiene tallas o medidas, primero se elige una:
  * en la tarjeta salen al tocar "Elegir talla"; en la página del producto (grande) se ven siempre.
+ * La palabra (talla, medida, presentación…) es la del tipo de negocio de la tienda (2.7).
  */
 export default function BotonAgregar({ producto, grande = false }: { producto: Producto; grande?: boolean }) {
-  const { agregar } = useCarrito();
+  const { agregar, palabra } = useCarrito();
   const [agregado, setAgregado] = useState<string | null>(null);
   const [eligiendo, setEligiendo] = useState(false);
   const [talla, setTalla] = useState<string | null>(null);
@@ -25,7 +26,7 @@ export default function BotonAgregar({ producto, grande = false }: { producto: P
       precio: producto.precio ?? null,
       talla: t,
     });
-    setAgregado(t ? `✓ Talla ${t} agregada` : "✓ Agregado");
+    setAgregado(t ? `✓ ${palabra.Una} ${t}` : "✓ Agregado");
     setTimeout(() => setAgregado(null), 1400);
   };
 
@@ -46,7 +47,7 @@ export default function BotonAgregar({ producto, grande = false }: { producto: P
   }
 
   const chips = (alTocar: (t: string, boton: HTMLElement) => void, elegida: string | null) => (
-    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Elige tu talla">
+    <div className="flex flex-wrap gap-1.5" role="group" aria-label={`Elige tu ${palabra.una}`}>
       {tallas.map((t) => (
         <button
           key={t}
@@ -71,7 +72,7 @@ export default function BotonAgregar({ producto, grande = false }: { producto: P
     return (
       <div className="space-y-3">
         <div>
-          <p className="mb-1.5 text-sm font-semibold text-gray-700">Talla{talla ? `: ${talla}` : ""}</p>
+          <p className="mb-1.5 text-sm font-semibold text-gray-700">{palabra.Una}{talla ? `: ${talla}` : ""}</p>
           {chips((t) => setTalla((x) => (x === t ? null : t)), talla)}
         </div>
         <button
@@ -82,7 +83,7 @@ export default function BotonAgregar({ producto, grande = false }: { producto: P
           disabled={!talla}
           className="boton-primario w-full py-3 text-base"
         >
-          {agregado ?? (talla ? `Agregar talla ${talla} al carrito` : "Elige tu talla")}
+          {agregado ?? (talla ? `Agregar ${palabra.una} ${talla} al carrito` : `Elige tu ${palabra.una}`)}
         </button>
       </div>
     );
@@ -93,8 +94,8 @@ export default function BotonAgregar({ producto, grande = false }: { producto: P
     return (
       <div className="space-y-2 rounded-lg bg-marca-50 p-2">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold text-gray-700">Elige tu talla</p>
-          <button type="button" onClick={() => setEligiendo(false)} className="text-xs text-gray-500 hover:text-gray-800" aria-label="Cerrar tallas">
+          <p className="text-xs font-semibold text-gray-700">Elige tu {palabra.una}</p>
+          <button type="button" onClick={() => setEligiendo(false)} className="text-xs text-gray-500 hover:text-gray-800" aria-label={`Cerrar ${palabra.varias}`}>
             ✕
           </button>
         </div>
@@ -114,7 +115,7 @@ export default function BotonAgregar({ producto, grande = false }: { producto: P
       }}
       className="boton-primario w-full"
     >
-      {agregado ?? "Elegir talla"}
+      {agregado ?? `Elegir ${palabra.una}`}
     </button>
   );
 }

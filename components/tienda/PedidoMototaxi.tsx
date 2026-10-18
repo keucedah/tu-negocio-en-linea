@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ItemCarrito } from "./CartProvider";
+import { useCarrito, type ItemCarrito } from "./CartProvider";
 import type { MototaxiPublico } from "@/lib/mototaxis";
 import { enlaceWhatsApp, mensajeMototaxi, mensajeTiendaMototaxi, totalPedido } from "@/lib/whatsapp";
 import { crearFichaMototaxi, descargar } from "@/lib/fichaMototaxi";
@@ -56,6 +56,7 @@ export default function PedidoMototaxi({
   alCerrar: () => void;
   alVaciar: () => void;
 }) {
+  const { palabra } = useCarrito();
   const lista = useMemo(() => mezclar(mototaxis), [mototaxis]);
   const [elegido, setElegido] = useState<MototaxiPublico | null>(null);
   const [nombre, setNombre] = useState(nombreInicial);
@@ -104,6 +105,7 @@ export default function PedidoMototaxi({
     direccionCliente: direccion,
     nota,
     tienda: tienda.nombre,
+    palabra: palabra.una,
     direccionTienda: [tienda.direccion, tienda.municipio && !tienda.direccion.toLowerCase().includes(tienda.municipio.toLowerCase()) ? tienda.municipio : ""]
       .filter(Boolean)
       .join(", "),

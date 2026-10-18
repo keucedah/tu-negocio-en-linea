@@ -10,6 +10,7 @@ import { crearClienteServidor } from "../supabase/server";
 import { formatearCelular, numeroWhatsApp } from "../telefono";
 import type { Categoria, FilaTienda, Producto, Tienda, TipoNegocio } from "./types";
 import { POR_PAGINA, normalizar, type Filtros, type Orden } from "./filtros";
+import { limpiarTallas, medidasDeTipo } from "../tallas";
 
 export { leerFiltros } from "./filtros";
 
@@ -21,13 +22,15 @@ const COLUMNAS_BASE =
   "tipo:tipos_negocio(nombre, titulo_portada, texto_portada, texto_buscador)";
 const COLUMNAS_24 = COLUMNAS_BASE + ", banners_url, banners_path, color_portada";
 const COLUMNAS_241 = COLUMNAS_24 + ", banners_movil_url, banners_movil_path";
-const COLUMNAS_TIENDA = COLUMNAS_241 + ", direccion, municipio_id, ofrece_mototaxi, municipio:municipios(nombre)";
+const COLUMNAS_25 = COLUMNAS_241 + ", direccion, municipio_id, ofrece_mototaxi, municipio:municipios(nombre)";
+// 2.7: palabra y grupos de tallas o medidas del tipo de negocio
+const COLUMNAS_TIENDA = COLUMNAS_25.replace("texto_buscador)", "texto_buscador, medida_palabra, medida_grupos)");
 
 type Consulta = ReturnType<typeof crearClientePublico>;
 
-/** Lee la fila de la tienda. Si todavía no se ejecutó el SQL de la 2.5, 2.4.1 o 2.4, lee sin esas columnas. */
+/** Lee la fila de la tienda. Si todavía no se ejecutó el SQL de la 2.7, 2.5, 2.4.1 o 2.4, lee sin esas columnas. */
 async function leerFila(supabase: Consulta, slug: string): Promise<FilaTienda | null> {
-  for (const columnas of [COLUMNAS_TIENDA, COLUMNAS_241, COLUMNAS_24, COLUMNAS_BASE]) {
+  for (const columnas of [COLUMNAS_TIENDA, COLUMNAS_25, COLUMNAS_241, COLUMNAS_24, COLUMNAS_BASE]) {
     const r = await supabase.from("tiendas").select(columnas).eq("slug", slug).maybeSingle<FilaTienda>();
     // Falta una columna o tabla nueva: prueba sin ella
     if (r.error?.code === "42703" || r.error?.code === "PGRST200" || r.error?.code === "42P01") continue;
@@ -88,6 +91,7 @@ export const obtenerFilaTienda = cache(async (slug: string): Promise<FilaTienda 
 });
 
 export function aTienda(t: FilaTienda): Tienda {
+  const medidas = medidasDeTipo(t.tipo);
   return {
     id: t.id,
     slug: t.slug,
@@ -108,6 +112,8 @@ export function aTienda(t: FilaTienda): Tienda {
     municipio: t.municipio?.nombre ?? "",
     municipioId: t.municipio_id ?? null,
     ofreceMototaxi: t.ofrece_mototaxi ?? false,
+    palabraMedida: medidas.palabra,
+    gruposMedidas: medidas.grupos,
     banners: (t.banners_url?.length ? t.banners_url.slice(0, 3) : t.banner_url ? [t.banner_url] : []).map((pc, i) => ({
       pc,
       movil: t.banners_movil_url?.[i] ?? "",
@@ -418,3 +424,20 @@ export const obtenerTiposNegocio = cache(async (): Promise<TipoNegocio[]> => {
     .order("nombre");
   return data ?? [];
 });
+
+/**
+ * Tallas o medidas que el dueño ya escribió en sus productos (2.7), para sugerírselas al agregar otro.
+ * Solo las que no están en los grupos de su tipo de negocio.
+ */
+export async function obtenerMedidasUsadas(tiendaId: number, comunes: string[]): Promise<string[]> {
+  if (!supabaseConfigurado) return [];
+  const supabase = await crearClienteServidor();
+  const { data } = await supabase.from("productos").select("tallas").eq("tienda_id", tiendaId).neq("tallas", "{}").limit(2000);
+  const ya = new Set(comunes.map((c) => c.toLowerCase()));
+  const cuenta = new Map<string, number>();
+  for (const fila of (data ?? []) as { tallas: string[] }[]) {
+    for (const t of limpiarTallas(fila.tallas)) if (!ya.has(t.toLowerCase())) cuenta.set(t, (cuenta.get(t) ?? 0) + 1);
+  }
+  // Las más usadas primero
+  return [...cuenta.entries()].sort((a, b) => b[1] - a[1]).slice(0, 30).map(([t]) => t);
+}
