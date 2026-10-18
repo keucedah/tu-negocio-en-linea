@@ -8,6 +8,35 @@ Plataforma SaaS de catálogos en línea: tu página, tu panel de clientes y la t
 
 Los pasos completos están en la guía `guia-plataforma.pdf`.
 
+## Novedades de la 2.7: tallas o medidas según el tipo de negocio
+
+**Antes de subir esta versión, ejecuta en Supabase > SQL Editor del proyecto tu-negocio-en-linea (no en "ferreteria")
+`supabase/actualizacion-2.7.sql`.** Se puede ejecutar más de una vez.
+
+- Cada **tipo de negocio** tiene su palabra y sus grupos (Admin › Tipos de negocio):
+  - Ferretería: **medida**, con Pulgadas, Milímetros, Cable (calibre), Pintura y Largo.
+  - Ropa y calzado: **talla**, con los grupos de siempre.
+  - Farmacia, perfumería, abarrotería y agroveterinaria: **presentación** (mg, ml, lb…).
+  - Repuestos: **medida** (llantas, aceite). Celulares, librería y mueblería: **opción** (color, capacidad, tamaño).
+  - Los demás (Panadería, Otro…): **opción**, sin grupos: el dueño las escribe.
+- El panel del dueño dice "Tiene medidas" (o la palabra de su tipo) y muestra solo sus grupos. Debajo salen las
+  medidas que ese dueño ya escribió en otros productos, para marcarlas de un toque.
+- La tienda, el carrito y los mensajes de WhatsApp (a la tienda y al mototaxista) usan la misma palabra:
+  "Elegir medida", "(medida 3/4")".
+- Las tallas o medidas que ya tienen los productos no cambian. Cada una puede tener hasta 20 letras.
+- La App de la tienda 4.5 también usa la palabra. Las Apps anteriores siguen funcionando y dicen "talla".
+
+## Novedades de la 2.6.1: Privacidad y Términos
+
+No necesita SQL. Solo sube los archivos.
+
+- Páginas nuevas **/privacidad** (Política de privacidad) y **/terminos** (Términos y condiciones). Toman tu nombre,
+  dirección, WhatsApp y correo de Admin › Ajustes.
+- Enlaces a las dos al pie de la página principal, una nota "Al enviar aceptas nuestra Política de privacidad" bajo el
+  formulario de demostración y un enlace "Privacidad" al pie de cada tienda.
+- Las dos entran al sitemap. Las direcciones "privacidad" y "terminos" quedan reservadas (ninguna tienda puede usarlas).
+- Para cambiar un texto: `app/privacidad/page.tsx` y `app/terminos/page.tsx`. La fecha está en `components/Legal.tsx`.
+
 ## Novedades de la 2.6: App del mototaxista
 
 **Antes de subir el sitio**, ejecuta `supabase/actualizacion-2.6.sql` en el SQL Editor del proyecto

@@ -11,7 +11,7 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL, supabaseConfigurado } from "@/lib/conf
 
 const HOSTS_SIN_DOMINIO = /(^localhost$)|(^127\.0\.0\.1$)|(\.vercel\.app$)/;
 // Primeras partes de la ruta que son de la plataforma, no de una tienda.
-const RUTAS_PLATAFORMA = new Set(["", "admin", "entrar", "api", "mototaxi"]);
+const RUTAS_PLATAFORMA = new Set(["", "admin", "entrar", "api", "mototaxi", "privacidad", "terminos"]);
 const MINUTOS_CACHE = 5;
 const dominios = new Map<string, { slug: string | null; hasta: number }>();
 
